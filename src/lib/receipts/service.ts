@@ -145,29 +145,30 @@ export async function runOcr(
       extracted = mergeExtractions(extracted, parseFuelReceiptText(options.rawText));
       extracted.rawText = options.rawText;
     }
-    const purchasedAt = isoFromOcrDate(extracted.purchasedAt.value);
+    const { providerRaw, ...publicExtracted } = extracted;
+    const purchasedAt = isoFromOcrDate(publicExtracted.purchasedAt.value);
     await supabase
       .from("fuel_receipts")
       .update({
         status: "needs_review",
-        ocr_provider: extracted.provider,
-        ocr_provider_document_id: extracted.providerDocumentId,
-        ocr_confidence: extracted.overallConfidence,
-        ocr_raw_json: { rawText: extracted.rawText },
-        ocr_extracted_json: extracted,
-        merchant_name: extracted.merchantName.value,
-        merchant_address: extracted.merchantAddress.value,
-        merchant_city: extracted.merchantCity.value,
-        merchant_region: extracted.merchantRegion.value,
-        merchant_postal_code: extracted.merchantPostalCode.value,
+        ocr_provider: publicExtracted.provider,
+        ocr_provider_document_id: publicExtracted.providerDocumentId,
+        ocr_confidence: publicExtracted.overallConfidence,
+        ocr_raw_json: { rawText: publicExtracted.rawText, vision: providerRaw ?? null },
+        ocr_extracted_json: publicExtracted,
+        merchant_name: publicExtracted.merchantName.value,
+        merchant_address: publicExtracted.merchantAddress.value,
+        merchant_city: publicExtracted.merchantCity.value,
+        merchant_region: publicExtracted.merchantRegion.value,
+        merchant_postal_code: publicExtracted.merchantPostalCode.value,
         purchased_at: purchasedAt,
-        receipt_number: extracted.receiptNumber.value,
-        gallons: extracted.gallons.value,
-        price_per_gallon: extracted.pricePerGallon.value,
-        subtotal_amount: extracted.subtotalAmount.value,
-        tax_amount: extracted.taxAmount.value,
-        total_amount: extracted.totalAmount.value,
-        fuel_type: extracted.fuelType.value ?? "diesel",
+        receipt_number: publicExtracted.receiptNumber.value,
+        gallons: publicExtracted.gallons.value,
+        price_per_gallon: publicExtracted.pricePerGallon.value,
+        subtotal_amount: publicExtracted.subtotalAmount.value,
+        tax_amount: publicExtracted.taxAmount.value,
+        total_amount: publicExtracted.totalAmount.value,
+        fuel_type: publicExtracted.fuelType.value ?? "diesel",
       })
       .eq("id", receiptId);
     await supabase.from("receipt_audit_events").insert({
@@ -175,9 +176,9 @@ export async function runOcr(
       receipt_id: receiptId,
       actor_id: user.authUserId,
       event_type: "ocr_completed",
-      metadata: { provider: extracted.provider, warnings: extracted.warnings },
+      metadata: { provider: publicExtracted.provider, warnings: publicExtracted.warnings },
     });
-    return extracted;
+    return publicExtracted;
   } catch {
     await supabase.from("fuel_receipts").update({ status: "needs_review", ocr_provider: "manual" }).eq("id", receiptId);
     await supabase.from("receipt_audit_events").insert({

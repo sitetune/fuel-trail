@@ -1,7 +1,7 @@
 import { sha256Hex } from "@/lib/calculations";
 import { deleteQueuedReceipt, updateQueuedReceipt, type QueuedReceipt } from "@/lib/offline/queue";
 import { recognizeReceiptText } from "@/lib/ocr/browser";
-import { extractionHasValues } from "@/lib/ocr/parse-text";
+import { extractionNeedsSecondPass } from "@/lib/ocr/parse-text";
 import type { NormalizedReceiptExtraction } from "@/lib/ocr/types";
 
 async function postOcr(receiptId: string, rawText?: string) {
@@ -56,7 +56,7 @@ export async function flushQueuedReceipt(
   });
   options?.onStatus?.("Reading the receipt…");
   let extracted = await postOcr(data.receiptId);
-  if (!extractionHasValues(extracted) || extracted?.provider === "manual") {
+  if (extractionNeedsSecondPass(extracted)) {
     options?.onStatus?.("Trying a second pass on this photo…");
     try {
       const rawText = await recognizeReceiptText(item.blob);

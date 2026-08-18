@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { FieldError, Input, Label, Textarea } from "@/components/ui/input";
 import { Badge } from "@/components/ui/card";
-import { extractionHasValues } from "@/lib/ocr/parse-text";
+import { extractionHasValues, extractionNeedsSecondPass } from "@/lib/ocr/parse-text";
 import { recognizeReceiptText } from "@/lib/ocr/browser";
 import type { NormalizedReceiptExtraction } from "@/lib/ocr/types";
 
@@ -69,9 +69,9 @@ export function ReceiptReviewForm({
         });
         const firstJson = await first.json();
         const firstExtracted = firstJson.data?.extracted as NormalizedReceiptExtraction | undefined;
-        if (firstExtracted && extractionHasValues(firstExtracted) && firstExtracted.provider !== "manual") {
+        if (firstExtracted && extractionHasValues(firstExtracted)) {
           if (!cancelled) setFields(firstExtracted);
-          return;
+          if (!extractionNeedsSecondPass(firstExtracted)) return;
         }
         setOcrStatus("Trying a second pass on this photo…");
         const image = await fetch(`/api/receipts/${receiptId}/image`);
@@ -144,7 +144,20 @@ export function ReceiptReviewForm({
     missing || low(confidence) ? "border-[#F5A524] bg-[#F5A524]/10" : "";
 
   return (
-    <form action={onSubmit} className="space-y-4" key={fields?.providerDocumentId ?? fields?.rawText ?? "empty"}>
+    <form
+      action={onSubmit}
+      className="space-y-4"
+      key={[
+        fields?.provider,
+        fields?.merchantName?.value,
+        fields?.merchantCity?.value,
+        fields?.merchantRegion?.value,
+        fields?.purchasedAt?.value,
+        fields?.gallons?.value,
+        fields?.totalAmount?.value,
+        fields?.rawText?.slice(0, 24),
+      ].join("|")}
+    >
       <Card className="space-y-2">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img

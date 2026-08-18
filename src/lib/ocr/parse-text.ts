@@ -27,6 +27,14 @@ export function extractionHasValues(extraction: NormalizedReceiptExtraction | nu
   );
 }
 
+export function extractionNeedsSecondPass(extraction: NormalizedReceiptExtraction | null | undefined) {
+  if (!extraction || extraction.provider === "manual") return true;
+  if (!extractionHasValues(extraction)) return true;
+  const hasPlace = Boolean(extraction.merchantName.value || extraction.merchantCity.value);
+  const hasWhen = Boolean(extraction.purchasedAt.value);
+  return !hasPlace || !hasWhen;
+}
+
 export function pickField<T>(
   primary: ExtractedField<T>,
   fallback: ExtractedField<T>,

@@ -23,6 +23,7 @@ export type NormalizedReceiptExtraction = {
   overallConfidence: number | null;
   provider: string;
   providerDocumentId: string | null;
+  providerRaw?: unknown;
   warnings: string[];
 };
 

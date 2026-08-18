@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import type { ReactNode } from "react";
 import { Geist } from "next/font/google";
 import { Toaster } from "sonner";
 import { brand } from "@/config/brand";
@@ -28,7 +29,7 @@ export const viewport: Viewport = {
   maximumScale: 1,
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en" className={`${sans.variable} h-full`}>
       <body className="min-h-full bg-[#F7F8FA] font-sans text-[#0B1F33] antialiased">

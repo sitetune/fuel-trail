@@ -31,9 +31,6 @@ export function pickField<T>(
   primary: ExtractedField<T>,
   fallback: ExtractedField<T>,
 ): ExtractedField<T> {
-  if (primary.value != null && fallback.value != null) {
-    return (primary.confidence ?? 0) >= (fallback.confidence ?? 0) ? primary : fallback;
-  }
   return primary.value != null ? primary : fallback;
 }
 
@@ -111,7 +108,7 @@ export function parseFuelReceiptText(rawText: string): NormalizedReceiptExtracti
     .map((line) => line.replace(/\s+/g, " ").trim())
     .filter(Boolean);
 
-  const merchantName = merchantFromLines(lines);
+  const merchantName = brandFromText(text) ?? merchantFromLines(lines);
   const address = addressFromText(text, lines);
   const purchasedAt = dateTimeFromText(text);
   const receiptNumber = receiptNumberFromText(text);
@@ -143,6 +140,36 @@ function uniqueWarnings(warnings: string[], warning: string) {
   return warnings.includes(warning) ? warnings : [...warnings, warning];
 }
 
+function brandFromText(text: string) {
+  const brands: Array<[RegExp, string]> = [
+    [/flying\s*j/i, "Flying J"],
+    [/pilot/i, "Pilot"],
+    [/love'?s/i, "Love's"],
+    [/\bpetro\b/i, "Petro"],
+    [/\bta\s+travel/i, "TA"],
+    [/travelcenters?\s+of\s+america/i, "TA"],
+    [/kwik\s*trip/i, "Kwik Trip"],
+    [/casey's/i, "Casey's"],
+    [/speedway/i, "Speedway"],
+    [/racetrac/i, "RaceTrac"],
+    [/quake[rn]\s*state/i, "Quaker State"],
+  ];
+  for (const [pattern, name] of brands) {
+    if (pattern.test(text)) return name;
+  }
+  return null;
+}
+
+function looksLikeMerchant(line: string) {
+  const letters = line.replace(/[^A-Za-z]/g, "");
+  if (letters.length < 3) return false;
+  if (/\$|gallons?|trdsl|reefer|pump|subtotal|tendered/i.test(line)) return false;
+  const vowels = (letters.match(/[aeiou]/gi) ?? []).length;
+  if (vowels === 0) return false;
+  if ((line.match(/[^A-Za-z0-9\s'#.-]/g) ?? []).length > 3) return false;
+  return true;
+}
+
 function merchantFromLines(lines: string[]) {
   for (const line of lines.slice(0, 8)) {
     if (line.length < 3 || line.length > 48) continue;
@@ -151,6 +178,7 @@ function merchantFromLines(lines: string[]) {
     if (/\d{5}(?:-\d{4})?$/.test(line)) continue;
     if (/[A-Z]{2}\s+\d{5}/.test(line)) continue;
     if (/^[\d$.:/-]+$/.test(line)) continue;
+    if (!looksLikeMerchant(line)) continue;
     return line.replace(/^\W+|\W+$/g, "").trim() || line;
   }
   return null;
@@ -161,15 +189,21 @@ function addressFromText(text: string, lines: string[]) {
     text.match(/\b([A-Za-z][A-Za-z .'-]+?),\s*([A-Z]{2})\s+(\d{5}(?:-\d{4})?)\b/) ??
     text.match(/\b([A-Za-z][A-Za-z .'-]+?)\s+([A-Z]{2})\s+(\d{5}(?:-\d{4})?)\b/);
   const region = cityStateZip?.[2] && US_STATES.has(cityStateZip[2]) ? cityStateZip[2] : null;
-  const city = cityStateZip?.[1]?.replace(/,$/, "").trim() ?? null;
+  let city = cityStateZip?.[1]?.replace(/,$/, "").trim() ?? null;
+  if (city) city = city.replace(/^(?:[a-z]{1,2}\s+)+/i, "").replace(/^[^A-Za-z]+/, "");
   const postal = cityStateZip?.[3] ?? null;
 
-  const streetLine = lines.find((line) =>
-    /^\d{1,6}\s+.+$/.test(line) &&
-    /(st|street|ave|avenue|rd|road|hwy|highway|blvd|dr|drive|ln|lane|pkwy|i-\d+|us[- ]?\d+|fm\s?\d+)/i.test(line),
-  );
+  const streetLine = lines.find((line) => {
+    if (/\$|gallons?|trdsl|reefer|pump|total|subtotal/i.test(line)) return false;
+    return (
+      /^\d{1,6}\s+.+$/.test(line) &&
+      /\b(st|street|ave|avenue|rd|road|hwy|highway|blvd|dr|drive|ln|lane|pkwy|cir|way)\b|\bi-\d+\b|\bus[- ]?\d+\b|\bfm\s?\d+\b/i.test(
+        line,
+      )
+    );
+  });
   return {
-    address: streetLine ?? (city && region ? `${city}, ${region}${postal ? ` ${postal}` : ""}` : null),
+    address: streetLine ?? null,
     city,
     region,
     postal,
@@ -213,29 +247,28 @@ function dateTimeFromText(text: string) {
 }
 
 function receiptNumberFromText(text: string) {
-  const match = text.match(
-    /(?:receipt|trans(?:action)?|inv(?:oice)?|auth|ref|ticket)(?:\s*(?:no\.?|#|num(?:ber)?))?[:.\s#]*([A-Z0-9-]{3,})/i,
-  );
-  if (match?.[1] && !/^(GAL|TOTAL|DIESEL)$/i.test(match[1])) return match[1];
-  const hashed = text.match(/#\s*([A-Z0-9-]{4,})\b/i);
-  return hashed?.[1] ?? null;
+  const labeled =
+    text.match(/\breceipt\s*#?:?\s*([A-Z0-9-]{4,})\b/i) ??
+    text.match(/\btransaction\s*#?:?\s*([A-Z0-9-]{4,})\b/i);
+  if (labeled?.[1] && !/fed|ein|id/i.test(labeled[0])) return labeled[1];
+  return null;
 }
 
 function gallonsFromText(text: string) {
-  const labeled = [
-    ...text.matchAll(/(\d{1,3}(?:\.\d{1,4})?)\s*(?:GALS?|GALLONS?)\b/gi),
-    ...text.matchAll(/\b(?:GALS?|GALLONS?|VOLUME|QTY)\s*[:#]?\s*(\d{1,3}(?:\.\d{1,4})?)/gi),
-  ];
-  const values = labeled
+  const labeled = [...text.matchAll(/\bgallons?\s*:\s*(\d{1,3}(?:\.\d{1,4})?)/gi)];
+  const inline = [...text.matchAll(/(\d{1,3}(?:\.\d{1,4})?)[^\S\n]*(?:GALS?|GALLONS?)\b/gi)];
+  const values = [...labeled, ...inline]
     .map((match) => Number(match[1]))
-    .filter((value) => Number.isFinite(value) && value >= 1 && value <= 400);
-  if (values.length > 0) return values.sort((a, b) => b - a)[0];
-  return null;
+    .filter((value) => Number.isFinite(value) && value >= 0.5 && value <= 400);
+  if (values.length === 0) return null;
+  const unique = [...new Set(values.map((value) => Number(value.toFixed(4))))];
+  return unique.length > 1 ? unique.reduce((sum, value) => sum + value, 0) : unique[0];
 }
 
 function pricePerGallonFromText(text: string) {
   const match =
-    text.match(/(?:PRICE\s*\/\s*GAL|PPG|PER\s*GAL(?:LON)?|PUMP\s*PRICE)\s*[:$]?\s*(\d\.\d{3,4})/i) ??
+    text.match(/price\s*\/\s*gal(?:lon)?s?\s*:?\s*\$?\s*(\d\.\d{3,4})/i) ??
+    text.match(/(?:PPG|PER\s*GAL(?:LON)?|PUMP\s*PRICE)\s*[:$]?\s*(\d\.\d{3,4})/i) ??
     text.match(/\$\s*(\d\.\d{3,4})\s*(?:\/\s*GAL|PER\s*GAL)/i) ??
     text.match(/(\d\.\d{3,4})\s*\/\s*GAL/i) ??
     text.match(/@\s*\$?\s*(\d\.\d{3,4})/);
@@ -246,7 +279,7 @@ function pricePerGallonFromText(text: string) {
 
 function totalFromText(text: string) {
   const matches = [
-    ...text.matchAll(/(?:TOTAL(?:\s+(?:SALE|FUEL|AMOUNT))?|AMOUNT\s+DUE|SALE\s+AMT)\s*[:$]?\s*\$?\s*(\d{1,4}[.,]\d{2})/gi),
+    ...text.matchAll(/(?:TOTAL(?:\s+(?:SALE|FUEL|AMOUNT))?|AMOUNT\s+(?:DUE|TENDERED)|SALE\s+AMT)\s*[:$]?\s*\$?\s*(\d{1,4}[.,]\d{2})/gi),
   ];
   const values = matches
     .map((match) => Number(match[1].replace(",", ".")))

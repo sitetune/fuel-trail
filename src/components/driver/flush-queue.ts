@@ -1,6 +1,19 @@
 import { sha256Hex } from "@/lib/calculations";
 import { deleteQueuedReceipt, updateQueuedReceipt, type QueuedReceipt } from "@/lib/offline/queue";
 import { recognizeReceiptText } from "@/lib/ocr/browser";
+import { extractionHasValues } from "@/lib/ocr/parse-text";
+import type { NormalizedReceiptExtraction } from "@/lib/ocr/types";
+
+async function postOcr(receiptId: string, rawText?: string) {
+  const response = await fetch(`/api/receipts/${receiptId}/ocr`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ rawText: rawText || undefined }),
+  });
+  if (!response.ok) return null;
+  const json = (await response.json()) as { data?: { extracted?: NormalizedReceiptExtraction } };
+  return json.data?.extracted ?? null;
+}
 
 export async function flushQueuedReceipt(
   item: QueuedReceipt,
@@ -41,18 +54,17 @@ export async function flushQueuedReceipt(
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ sha256: sha }),
   });
-  options?.onStatus?.("Reading merchant, gallons, and total from the photo…");
-  let rawText = "";
-  try {
-    rawText = await recognizeReceiptText(item.blob);
-  } catch {
-    rawText = "";
+  options?.onStatus?.("Reading the receipt…");
+  let extracted = await postOcr(data.receiptId);
+  if (!extractionHasValues(extracted) || extracted?.provider === "manual") {
+    options?.onStatus?.("Trying a second pass on this photo…");
+    try {
+      const rawText = await recognizeReceiptText(item.blob);
+      extracted = await postOcr(data.receiptId, rawText);
+    } catch {
+      extracted = extracted ?? null;
+    }
   }
-  await fetch(`/api/receipts/${data.receiptId}/ocr`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ rawText: rawText || undefined }),
-  });
   await deleteQueuedReceipt(item.id);
   return data.receiptId;
 }

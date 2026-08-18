@@ -1,8 +1,10 @@
-import { z } from "zod";
 import { AuthError, requireSession } from "@/lib/auth/session";
 import { apiError, apiOk } from "@/lib/api/http";
 import { enforceRateLimit } from "@/lib/api/rate-limit";
 import { runOcr } from "@/lib/receipts/service";
+import { z } from "zod";
+
+export const maxDuration = 60;
 
 const bodySchema = z
   .object({

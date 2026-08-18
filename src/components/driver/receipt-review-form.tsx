@@ -26,8 +26,7 @@ function toDateTimeLocal(value: string | null | undefined) {
       return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
     }
   }
-  const now = new Date();
-  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
+  return "";
 }
 
 function numberValue(value: number | null | undefined) {
@@ -61,8 +60,20 @@ export function ReceiptReviewForm({
     async function fillFromPhoto() {
       if (extractionHasValues(extraction)) return;
       setOcrBusy(true);
-      setOcrStatus("Reading merchant, gallons, and total from the photo…");
+      setOcrStatus("Reading the receipt…");
       try {
+        const first = await fetch(`/api/receipts/${receiptId}/ocr`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({}),
+        });
+        const firstJson = await first.json();
+        const firstExtracted = firstJson.data?.extracted as NormalizedReceiptExtraction | undefined;
+        if (firstExtracted && extractionHasValues(firstExtracted) && firstExtracted.provider !== "manual") {
+          if (!cancelled) setFields(firstExtracted);
+          return;
+        }
+        setOcrStatus("Trying a second pass on this photo…");
         const image = await fetch(`/api/receipts/${receiptId}/image`);
         if (!image.ok) throw new Error("image");
         const blob = await image.blob();

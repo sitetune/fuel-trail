@@ -21,6 +21,7 @@ export function ReceiptCapture({
   const [preview, setPreview] = useState<string | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const [status, setStatus] = useState<string | null>(null);
+  const [working, setWorking] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -55,9 +56,12 @@ export function ReceiptCapture({
       setStatus("Waiting to upload — you are offline. Open Queue and tap Retry when you have service.");
       return;
     }
+    setWorking(true);
     setStatus("Uploading original receipt…");
     try {
-      const receiptId = await flushQueuedReceipt(queued);
+      const receiptId = await flushQueuedReceipt(queued, {
+        onStatus: setStatus,
+      });
       if (receiptId) {
         router.push(`/driver/receipts/${receiptId}/review`);
         return;
@@ -67,6 +71,8 @@ export function ReceiptCapture({
     } catch {
       setStatus("Upload failed. The photo is saved on this device — use Retry.");
       router.push("/driver/queue");
+    } finally {
+      setWorking(false);
     }
   }
 
@@ -114,8 +120,8 @@ export function ReceiptCapture({
             >
               Retake
             </Button>
-            <Button className="flex-1" variant="amber" onClick={usePhoto} disabled={!truckId}>
-              Use photo
+            <Button className="flex-1" variant="amber" onClick={usePhoto} disabled={!truckId || working}>
+              {working ? "Working…" : "Use photo"}
             </Button>
           </div>
         </Card>

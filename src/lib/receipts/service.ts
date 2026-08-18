@@ -121,7 +121,11 @@ export async function completeUpload(user: SessionUser, receiptId: string, sha25
   return { exactDuplicateOf: exactDup?.id ?? null };
 }
 
-export async function runOcr(user: SessionUser, receiptId: string) {
+export async function runOcr(
+  user: SessionUser,
+  receiptId: string,
+  options?: { rawText?: string | null },
+) {
   const supabase = await createServerSupabaseClient();
   const { data: receipt } = await supabase.from("fuel_receipts").select("*").eq("id", receiptId).single();
   if (!receipt?.original_image_path) throw new Error("Receipt image is not uploaded.");
@@ -131,11 +135,17 @@ export async function runOcr(user: SessionUser, receiptId: string) {
   const bytes = new Uint8Array(await file.arrayBuffer());
   const provider = getReceiptOcrProvider();
   try {
-    const extracted = await provider.analyze({
+    let extracted = await provider.analyze({
       bytes,
       mimeType: file.type || "image/jpeg",
       fileName: "receipt.jpg",
     });
+    if (options?.rawText) {
+      const { mergeExtractions, parseFuelReceiptText } = await import("@/lib/ocr/parse-text");
+      extracted = mergeExtractions(extracted, parseFuelReceiptText(options.rawText));
+      extracted.rawText = options.rawText;
+    }
+    const purchasedAt = isoFromOcrDate(extracted.purchasedAt.value);
     await supabase
       .from("fuel_receipts")
       .update({
@@ -143,13 +153,14 @@ export async function runOcr(user: SessionUser, receiptId: string) {
         ocr_provider: extracted.provider,
         ocr_provider_document_id: extracted.providerDocumentId,
         ocr_confidence: extracted.overallConfidence,
+        ocr_raw_json: { rawText: extracted.rawText },
         ocr_extracted_json: extracted,
         merchant_name: extracted.merchantName.value,
         merchant_address: extracted.merchantAddress.value,
         merchant_city: extracted.merchantCity.value,
         merchant_region: extracted.merchantRegion.value,
         merchant_postal_code: extracted.merchantPostalCode.value,
-        purchased_at: extracted.purchasedAt.value,
+        purchased_at: purchasedAt,
         receipt_number: extracted.receiptNumber.value,
         gallons: extracted.gallons.value,
         price_per_gallon: extracted.pricePerGallon.value,
@@ -175,12 +186,36 @@ export async function runOcr(user: SessionUser, receiptId: string) {
       actor_id: user.authUserId,
       event_type: "ocr_failed",
     });
+    if (options?.rawText) {
+      const { parseFuelReceiptText } = await import("@/lib/ocr/parse-text");
+      return parseFuelReceiptText(options.rawText);
+    }
     return getReceiptOcrProvider().analyze({
       bytes,
       mimeType: "image/jpeg",
       fileName: "receipt.jpg",
     });
   }
+}
+
+function isoFromOcrDate(value: string | null) {
+  if (!value) return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date.toISOString();
+}
+
+export async function receiptImageBytes(user: SessionUser, receiptId: string) {
+  const supabase = await createServerSupabaseClient();
+  const { data: receipt } = await supabase
+    .from("fuel_receipts")
+    .select("original_image_path")
+    .eq("id", receiptId)
+    .single();
+  if (!receipt?.original_image_path) throw new Error("Receipt not found.");
+  const admin = createServiceRoleClient();
+  const { data, error } = await admin.storage.from("fuel-receipts").download(receipt.original_image_path);
+  if (error || !data) throw new Error("Could not read stored receipt.");
+  return { bytes: new Uint8Array(await data.arrayBuffer()), mimeType: data.type || "image/jpeg" };
 }
 
 export async function submitReceipt(user: SessionUser, receiptId: string, payload: unknown) {

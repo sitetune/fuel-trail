@@ -1,25 +1,37 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { FieldError, Input, Label, Textarea } from "@/components/ui/input";
 import { Badge } from "@/components/ui/card";
-
-type Extraction = {
-  merchantName?: { value: string | null; confidence: number | null };
-  merchantAddress?: { value: string | null; confidence: number | null };
-  merchantCity?: { value: string | null; confidence: number | null };
-  merchantRegion?: { value: string | null; confidence: number | null };
-  gallons?: { value: number | null; confidence: number | null };
-  totalAmount?: { value: number | null; confidence: number | null };
-  purchasedAt?: { value: string | null; confidence: number | null };
-  warnings?: string[];
-};
+import { extractionHasValues } from "@/lib/ocr/parse-text";
+import { recognizeReceiptText } from "@/lib/ocr/browser";
+import type { NormalizedReceiptExtraction } from "@/lib/ocr/types";
 
 function low(confidence: number | null | undefined) {
   return confidence !== null && confidence !== undefined && confidence < 0.6;
+}
+
+function pad(value: number) {
+  return String(value).padStart(2, "0");
+}
+
+function toDateTimeLocal(value: string | null | undefined) {
+  if (value && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(value)) return value.slice(0, 16);
+  if (value) {
+    const date = new Date(value);
+    if (!Number.isNaN(date.getTime())) {
+      return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+    }
+  }
+  const now = new Date();
+  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
+}
+
+function numberValue(value: number | null | undefined) {
+  return value == null ? "" : String(value);
 }
 
 export function ReceiptReviewForm({
@@ -28,27 +40,55 @@ export function ReceiptReviewForm({
   truckUnit,
   purchaserName,
   extraction,
-  imagePath,
 }: {
   receiptId: string;
   truckId: string;
   truckUnit: string;
   purchaserName: string;
-  extraction: Extraction | null;
-  imagePath: string | null;
+  extraction: NormalizedReceiptExtraction | null;
 }) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
-  const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [ocrBusy, setOcrBusy] = useState(!extractionHasValues(extraction));
+  const [ocrStatus, setOcrStatus] = useState(
+    extractionHasValues(extraction) ? null : "Reading merchant, gallons, and total from the photo…",
+  );
+  const [fields, setFields] = useState(extraction);
 
-  async function loadImage() {
-    const response = await fetch(`/api/receipts/${receiptId}/signed-image`);
-    if (response.ok) {
-      const json = await response.json();
-      setImageUrl(json.data.url);
+  useEffect(() => {
+    let cancelled = false;
+    async function fillFromPhoto() {
+      if (extractionHasValues(extraction)) return;
+      setOcrBusy(true);
+      setOcrStatus("Reading merchant, gallons, and total from the photo…");
+      try {
+        const image = await fetch(`/api/receipts/${receiptId}/image`);
+        if (!image.ok) throw new Error("image");
+        const blob = await image.blob();
+        const rawText = await recognizeReceiptText(blob);
+        const response = await fetch(`/api/receipts/${receiptId}/ocr`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ rawText }),
+        });
+        const json = await response.json();
+        if (!cancelled && json.data?.extracted) {
+          setFields(json.data.extracted as NormalizedReceiptExtraction);
+        }
+      } catch {
+        if (!cancelled) {
+          setOcrStatus("Could not auto-read this photo. Enter the values from the image.");
+        }
+      } finally {
+        if (!cancelled) setOcrBusy(false);
+      }
     }
-  }
+    void fillFromPhoto();
+    return () => {
+      cancelled = true;
+    };
+  }, [extraction, receiptId]);
 
   async function onSubmit(formData: FormData) {
     setBusy(true);
@@ -93,17 +133,19 @@ export function ReceiptReviewForm({
     missing || low(confidence) ? "border-[#F5A524] bg-[#F5A524]/10" : "";
 
   return (
-    <form action={onSubmit} className="space-y-4">
+    <form action={onSubmit} className="space-y-4" key={fields?.providerDocumentId ?? fields?.rawText ?? "empty"}>
       <Card className="space-y-2">
-        {imageUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={imageUrl} alt="Stored receipt" className="max-h-64 w-full object-contain" />
-        ) : (
-          <Button type="button" variant="outline" onClick={loadImage} disabled={!imagePath}>
-            Show stored receipt image
-          </Button>
-        )}
-        {(extraction?.warnings ?? []).map((warning) => (
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={`/api/receipts/${receiptId}/image`}
+          alt="Stored receipt"
+          className="max-h-64 w-full object-contain"
+        />
+        {ocrBusy ? <p className="text-sm text-[#0B1F33]">{ocrStatus}</p> : null}
+        {!ocrBusy && ocrStatus && !extractionHasValues(fields) ? (
+          <p className="text-sm text-[#0B1F33]">{ocrStatus}</p>
+        ) : null}
+        {(fields?.warnings ?? []).map((warning) => (
           <p key={warning} className="text-sm text-[#0B1F33]">
             {warning}
           </p>
@@ -120,8 +162,8 @@ export function ReceiptReviewForm({
           name="purchasedAt"
           type="datetime-local"
           required
-          className={highlight(extraction?.purchasedAt?.confidence ?? null, !extraction?.purchasedAt?.value)}
-          defaultValue={extraction?.purchasedAt?.value?.slice(0, 16) ?? ""}
+          className={highlight(fields?.purchasedAt?.confidence ?? null, !fields?.purchasedAt?.value)}
+          defaultValue={toDateTimeLocal(fields?.purchasedAt?.value)}
         />
       </div>
       <div>
@@ -130,8 +172,8 @@ export function ReceiptReviewForm({
           id="merchantName"
           name="merchantName"
           required
-          className={highlight(extraction?.merchantName?.confidence ?? null, !extraction?.merchantName?.value)}
-          defaultValue={extraction?.merchantName?.value ?? ""}
+          className={highlight(fields?.merchantName?.confidence ?? null, !fields?.merchantName?.value)}
+          defaultValue={fields?.merchantName?.value ?? ""}
         />
       </div>
       <div>
@@ -140,14 +182,20 @@ export function ReceiptReviewForm({
           id="merchantAddress"
           name="merchantAddress"
           required
-          className={highlight(extraction?.merchantAddress?.confidence ?? null, !extraction?.merchantAddress?.value)}
-          defaultValue={extraction?.merchantAddress?.value ?? ""}
+          className={highlight(fields?.merchantAddress?.confidence ?? null, !fields?.merchantAddress?.value)}
+          defaultValue={fields?.merchantAddress?.value ?? ""}
         />
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div>
           <Label htmlFor="merchantCity">City</Label>
-          <Input id="merchantCity" name="merchantCity" required defaultValue={extraction?.merchantCity?.value ?? ""} />
+          <Input
+            id="merchantCity"
+            name="merchantCity"
+            required
+            className={highlight(fields?.merchantCity?.confidence ?? null, !fields?.merchantCity?.value)}
+            defaultValue={fields?.merchantCity?.value ?? ""}
+          />
         </div>
         <div>
           <Label htmlFor="merchantRegion">State</Label>
@@ -156,15 +204,34 @@ export function ReceiptReviewForm({
             name="merchantRegion"
             required
             maxLength={2}
-            className={highlight(extraction?.merchantRegion?.confidence ?? null, !extraction?.merchantRegion?.value)}
-            defaultValue={extraction?.merchantRegion?.value ?? ""}
+            className={highlight(fields?.merchantRegion?.confidence ?? null, !fields?.merchantRegion?.value)}
+            defaultValue={fields?.merchantRegion?.value ?? ""}
           />
         </div>
       </div>
-      <Input name="merchantPostalCode" placeholder="ZIP (optional)" />
-      <Input name="receiptNumber" placeholder="Receipt number (optional)" />
-      <Input name="purchaserName" defaultValue={purchaserName} required />
-      <Input name="fuelType" defaultValue="diesel" />
+      <div>
+        <Label htmlFor="merchantPostalCode">ZIP</Label>
+        <Input
+          id="merchantPostalCode"
+          name="merchantPostalCode"
+          className={highlight(fields?.merchantPostalCode?.confidence ?? null, !fields?.merchantPostalCode?.value)}
+          defaultValue={fields?.merchantPostalCode?.value ?? ""}
+        />
+      </div>
+      <div>
+        <Label htmlFor="receiptNumber">Receipt number</Label>
+        <Input
+          id="receiptNumber"
+          name="receiptNumber"
+          className={highlight(fields?.receiptNumber?.confidence ?? null, !fields?.receiptNumber?.value)}
+          defaultValue={fields?.receiptNumber?.value ?? ""}
+        />
+      </div>
+      <div>
+        <Label htmlFor="purchaserName">Purchaser</Label>
+        <Input id="purchaserName" name="purchaserName" defaultValue={purchaserName} required />
+      </div>
+      <input type="hidden" name="fuelType" value={fields?.fuelType?.value ?? "diesel"} />
       <div className="grid grid-cols-2 gap-3">
         <div>
           <Label htmlFor="gallons">Gallons</Label>
@@ -174,13 +241,20 @@ export function ReceiptReviewForm({
             type="number"
             step="0.001"
             required
-            className={highlight(extraction?.gallons?.confidence ?? null, !extraction?.gallons?.value)}
-            defaultValue={extraction?.gallons?.value ?? ""}
+            className={highlight(fields?.gallons?.confidence ?? null, !fields?.gallons?.value)}
+            defaultValue={numberValue(fields?.gallons?.value)}
           />
         </div>
         <div>
           <Label htmlFor="pricePerGallon">Price / gal</Label>
-          <Input id="pricePerGallon" name="pricePerGallon" type="number" step="0.0001" />
+          <Input
+            id="pricePerGallon"
+            name="pricePerGallon"
+            type="number"
+            step="0.0001"
+            className={highlight(fields?.pricePerGallon?.confidence ?? null, !fields?.pricePerGallon?.value)}
+            defaultValue={numberValue(fields?.pricePerGallon?.value)}
+          />
         </div>
       </div>
       <div>
@@ -191,8 +265,8 @@ export function ReceiptReviewForm({
           type="number"
           step="0.01"
           required
-          className={highlight(extraction?.totalAmount?.confidence ?? null, !extraction?.totalAmount?.value)}
-          defaultValue={extraction?.totalAmount?.value ?? ""}
+          className={highlight(fields?.totalAmount?.confidence ?? null, !fields?.totalAmount?.value)}
+          defaultValue={numberValue(fields?.totalAmount?.value)}
         />
       </div>
       <Input name="odometer" type="number" step="0.1" placeholder="Odometer (optional)" />
@@ -217,8 +291,8 @@ export function ReceiptReviewForm({
       </label>
       <Textarea name="driverNote" placeholder="Note for managers (optional)" />
       <FieldError message={error ?? undefined} />
-      <Button type="submit" variant="amber" size="lg" className="w-full" disabled={busy}>
-        Submit receipt
+      <Button type="submit" variant="amber" size="lg" className="w-full" disabled={busy || ocrBusy}>
+        {ocrBusy ? "Reading receipt…" : "Submit receipt"}
       </Button>
       <Badge tone="amber">OCR is an assistant. Confirm every value before submitting.</Badge>
     </form>

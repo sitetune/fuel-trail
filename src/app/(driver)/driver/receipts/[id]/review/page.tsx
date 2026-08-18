@@ -26,7 +26,6 @@ export default async function ReviewReceiptPage({
         truckUnit={(receipt.trucks as { unit_number: string }).unit_number}
         purchaserName={receipt.purchaser_name ?? user.profile.full_name}
         extraction={receipt.ocr_extracted_json as never}
-        imagePath={receipt.original_image_path}
       />
     </div>
   );

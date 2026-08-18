@@ -1,7 +1,11 @@
 import { sha256Hex } from "@/lib/calculations";
 import { deleteQueuedReceipt, updateQueuedReceipt, type QueuedReceipt } from "@/lib/offline/queue";
+import { recognizeReceiptText } from "@/lib/ocr/browser";
 
-export async function flushQueuedReceipt(item: QueuedReceipt): Promise<string | null> {
+export async function flushQueuedReceipt(
+  item: QueuedReceipt,
+  options?: { onStatus?: (message: string) => void },
+): Promise<string | null> {
   await updateQueuedReceipt(item.id, { status: "uploading" });
   const initiate = await fetch("/api/receipts/initiate", {
     method: "POST",
@@ -37,7 +41,18 @@ export async function flushQueuedReceipt(item: QueuedReceipt): Promise<string | 
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ sha256: sha }),
   });
-  await fetch(`/api/receipts/${data.receiptId}/ocr`, { method: "POST" });
+  options?.onStatus?.("Reading merchant, gallons, and total from the photo…");
+  let rawText = "";
+  try {
+    rawText = await recognizeReceiptText(item.blob);
+  } catch {
+    rawText = "";
+  }
+  await fetch(`/api/receipts/${data.receiptId}/ocr`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ rawText: rawText || undefined }),
+  });
   await deleteQueuedReceipt(item.id);
   return data.receiptId;
 }

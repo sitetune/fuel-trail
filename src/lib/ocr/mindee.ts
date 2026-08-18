@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { enrichExtraction, mergeExtractions, parseFuelReceiptText } from "./parse-text";
 import { emptyExtraction, field, type NormalizedReceiptExtraction, type ReceiptOcrProvider } from "./types";
 
 const mindeeField = z
@@ -75,22 +76,24 @@ function parseAddress(address: string | null): {
 }
 
 export function gallonsFromLineItems(
-  lineItems: { description?: string | null; quantity?: number | null }[],
+  lineItems: { description?: string | null; quantity?: number | null; unit_price?: number | null }[],
   rawText?: string | null,
-): { gallons: number | null; confidence: number | null } {
+): { gallons: number | null; confidence: number | null; pricePerGallon: number | null } {
   for (const item of lineItems) {
     const description = item.description ?? "";
+    const unitPrice =
+      item.unit_price && item.unit_price >= 1 && item.unit_price <= 20 ? item.unit_price : null;
     if (/diesel|fuel|gal|gasoline|def/i.test(description) && item.quantity && item.quantity > 5) {
-      return { gallons: item.quantity, confidence: 0.55 };
+      return { gallons: item.quantity, confidence: 0.55, pricePerGallon: unitPrice };
     }
     const match = description.match(GALLON_PATTERN);
-    if (match) return { gallons: Number(match[1]), confidence: 0.6 };
+    if (match) return { gallons: Number(match[1]), confidence: 0.6, pricePerGallon: unitPrice };
   }
   if (rawText) {
     const match = rawText.match(GALLON_PATTERN);
-    if (match) return { gallons: Number(match[1]), confidence: 0.45 };
+    if (match) return { gallons: Number(match[1]), confidence: 0.45, pricePerGallon: null };
   }
-  return { gallons: null, confidence: null };
+  return { gallons: null, confidence: null, pricePerGallon: null };
 }
 
 export function normalizeMindeePrediction(
@@ -111,7 +114,7 @@ export function normalizeMindeePrediction(
       : null;
   const parsedAddress = parseAddress(supplierAddress);
   const lineItems = prediction.line_items ?? [];
-  const gallons = gallonsFromLineItems(lineItems);
+  const gallons = gallonsFromLineItems(lineItems, mindeeRawText(raw));
   const dateValue = prediction.date?.value ? String(prediction.date.value) : null;
   const timeValue = prediction.time?.value ? String(prediction.time.value) : null;
   const purchasedAt = dateValue ? `${dateValue}${timeValue ? `T${timeValue}` : "T12:00:00"}` : null;
@@ -134,7 +137,7 @@ export function normalizeMindeePrediction(
       ? confidences.reduce((sum, value) => sum + value, 0) / confidences.length
       : null;
 
-  return {
+  const extracted: NormalizedReceiptExtraction = {
     merchantName: field(
       prediction.supplier_name?.value ? String(prediction.supplier_name.value) : null,
       prediction.supplier_name?.confidence ?? null,
@@ -149,7 +152,7 @@ export function normalizeMindeePrediction(
       prediction.receipt_number?.confidence ?? null,
     ),
     gallons: field<number>(gallons.gallons, gallons.confidence),
-    pricePerGallon: field<number>(null, null),
+    pricePerGallon: field<number>(gallons.pricePerGallon, gallons.pricePerGallon ? 0.55 : null),
     subtotalAmount: field(
       typeof prediction.total_net?.value === "number" ? prediction.total_net.value : null,
       prediction.total_net?.confidence ?? null,
@@ -164,12 +167,26 @@ export function normalizeMindeePrediction(
     ),
     fuelType: field<string>(category === "gasoline" ? "diesel" : "diesel", category ? 0.4 : null),
     purchaserName: field<string>(null, null),
-    rawText: null,
+    rawText: mindeeRawText(raw),
     overallConfidence: overall,
     provider: "mindee",
     providerDocumentId: parsed.data.document.id ?? null,
     warnings,
   };
+  const ocrText = extracted.rawText;
+  if (ocrText) {
+    return enrichExtraction(mergeExtractions(extracted, parseFuelReceiptText(ocrText)));
+  }
+  return enrichExtraction(extracted);
+}
+
+function mindeeRawText(raw: unknown): string | null {
+  if (!raw || typeof raw !== "object") return null;
+  const document = (raw as { document?: Record<string, unknown> }).document;
+  if (!document) return null;
+  const ocr = document.ocr as { text?: string } | undefined;
+  if (typeof ocr?.text === "string" && ocr.text.trim()) return ocr.text;
+  return null;
 }
 
 export class MindeeReceiptOcrProvider implements ReceiptOcrProvider {

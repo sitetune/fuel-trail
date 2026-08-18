@@ -1,9 +1,16 @@
+import { z } from "zod";
 import { AuthError, requireSession } from "@/lib/auth/session";
 import { apiError, apiOk } from "@/lib/api/http";
 import { enforceRateLimit } from "@/lib/api/rate-limit";
 import { runOcr } from "@/lib/receipts/service";
 
-export async function POST(_request: Request, context: { params: Promise<{ id: string }> }) {
+const bodySchema = z
+  .object({
+    rawText: z.string().max(20000).optional(),
+  })
+  .optional();
+
+export async function POST(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
     const user = await requireSession();
     const limited = await enforceRateLimit({
@@ -13,7 +20,9 @@ export async function POST(_request: Request, context: { params: Promise<{ id: s
     });
     if (limited) return limited;
     const { id } = await context.params;
-    const extracted = await runOcr(user, id);
+    const json = await request.json().catch(() => ({}));
+    const body = bodySchema.parse(json) ?? {};
+    const extracted = await runOcr(user, id, { rawText: body.rawText });
     return apiOk({ extracted });
   } catch (error) {
     if (error instanceof AuthError) {

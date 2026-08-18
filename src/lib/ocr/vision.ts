@@ -10,11 +10,11 @@ const visionSchema = z.object({
   merchantPostalCode: z.string().nullable().optional(),
   purchasedAt: z.string().nullable().optional(),
   receiptNumber: z.string().nullable().optional(),
-  gallons: z.number().nullable().optional(),
-  pricePerGallon: z.number().nullable().optional(),
-  subtotalAmount: z.number().nullable().optional(),
-  taxAmount: z.number().nullable().optional(),
-  totalAmount: z.number().nullable().optional(),
+  gallons: z.coerce.number().nullable().optional(),
+  pricePerGallon: z.coerce.number().nullable().optional(),
+  subtotalAmount: z.coerce.number().nullable().optional(),
+  taxAmount: z.coerce.number().nullable().optional(),
+  totalAmount: z.coerce.number().nullable().optional(),
   fuelType: z.string().nullable().optional(),
   warnings: z.array(z.string()).optional(),
 });
@@ -86,56 +86,115 @@ function normalizeVisionDate(value: string | null | undefined) {
 
 function parseJsonContent(text: string) {
   const stripped = text.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "").trim();
-  return JSON.parse(stripped) as unknown;
+  const parsed = JSON.parse(stripped) as unknown;
+  return Array.isArray(parsed) ? parsed[0] : parsed;
 }
 
 function bytesToBase64(bytes: Uint8Array) {
   return Buffer.from(bytes).toString("base64");
 }
 
+function geminiAuthHeaders(apiKey: string) {
+  return {
+    "Content-Type": "application/json",
+    "x-goog-api-key": apiKey,
+  };
+}
+
+function describeGeminiError(status: number, body: unknown) {
+  const error =
+    body && typeof body === "object"
+      ? (body as { error?: { status?: string; message?: string } }).error
+      : undefined;
+  if (status === 401 || status === 403) {
+    return "Gemini rejected the API key. Confirm GEMINI_API_KEY on Vercel.";
+  }
+  if (status === 429) {
+    return "Gemini rate-limited this request. Wait a moment and scan again.";
+  }
+  if (status === 503 || error?.status === "UNAVAILABLE") {
+    return "Gemini is busy. Try scanning again in a few seconds.";
+  }
+  if (status === 404) {
+    return "Gemini model was not found for this key.";
+  }
+  return error?.message?.slice(0, 180) || "Gemini could not read this receipt. Enter the fields from the photo.";
+}
+
 export class GeminiReceiptOcrProvider implements ReceiptOcrProvider {
   constructor(private readonly apiKey: string) {}
 
   async analyze(input: ReceiptOcrInput): Promise<NormalizedReceiptExtraction> {
-    const models = ["gemini-2.5-flash", "gemini-2.0-flash"];
+    const models = [
+      process.env.GEMINI_MODEL,
+      "gemini-3.1-flash-lite",
+      "gemini-3.5-flash",
+      "gemini-3.6-flash",
+      "gemini-flash-lite-latest",
+    ].filter((model, index, list): model is string => Boolean(model) && list.indexOf(model) === index);
+
     let lastError = "Gemini could not read this receipt.";
     for (const model of models) {
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${this.apiKey}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            contents: [
-              {
-                parts: [
-                  { text: VISION_PROMPT },
+      for (let attempt = 0; attempt < 3; attempt += 1) {
+        let response: Response;
+        try {
+          response = await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
+            {
+              method: "POST",
+              headers: geminiAuthHeaders(this.apiKey),
+              body: JSON.stringify({
+                contents: [
                   {
-                    inline_data: {
-                      mime_type: input.mimeType || "image/jpeg",
-                      data: bytesToBase64(input.bytes),
-                    },
+                    parts: [
+                      { text: VISION_PROMPT },
+                      {
+                        inlineData: {
+                          mimeType: input.mimeType || "image/jpeg",
+                          data: bytesToBase64(input.bytes),
+                        },
+                      },
+                    ],
                   },
                 ],
-              },
-            ],
-            generationConfig: { responseMimeType: "application/json", temperature: 0 },
-          }),
-        },
-      );
-      if (response.status === 404) continue;
-      if (!response.ok) {
-        lastError = "Gemini could not read this receipt. Enter the fields from the photo.";
-        break;
-      }
-      const json = (await response.json()) as {
-        candidates?: { content?: { parts?: { text?: string }[] } }[];
-      };
-      const text = json.candidates?.[0]?.content?.parts?.map((part) => part.text ?? "").join("") ?? "";
-      try {
-        return toExtraction(parseJsonContent(text), "gemini");
-      } catch {
-        lastError = "Gemini returned text that could not be parsed.";
+                generationConfig: { responseMimeType: "application/json", temperature: 0 },
+              }),
+            },
+          );
+        } catch {
+          lastError = "Gemini is unreachable right now. Check the API key and try again.";
+          break;
+        }
+
+        const json = (await response.json().catch(() => ({}))) as {
+          error?: { status?: string; message?: string };
+          candidates?: { content?: { parts?: { text?: string }[] } }[];
+        };
+
+        if (response.status === 404) {
+          lastError = describeGeminiError(response.status, json);
+          break;
+        }
+        if (response.status === 503 || json.error?.status === "UNAVAILABLE") {
+          lastError = describeGeminiError(response.status, json);
+          await new Promise((resolve) => setTimeout(resolve, 400 * (attempt + 1)));
+          continue;
+        }
+        if (!response.ok) {
+          lastError = describeGeminiError(response.status, json);
+          if (response.status === 401 || response.status === 403) {
+            return emptyExtraction("gemini", [lastError]);
+          }
+          break;
+        }
+
+        const text = json.candidates?.[0]?.content?.parts?.map((part) => part.text ?? "").join("") ?? "";
+        try {
+          return toExtraction(parseJsonContent(text), "gemini");
+        } catch {
+          lastError = "Gemini returned text that could not be parsed.";
+          break;
+        }
       }
     }
     return emptyExtraction("gemini", [lastError]);

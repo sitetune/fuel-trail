@@ -16,12 +16,25 @@ Exact duplicate: same `original_sha256`. Likely duplicate: normalized signature 
 
 Owner-only. The last active owner cannot be deactivated. Deactivated users are blocked in session loading.
 
-## Backup / export
+## Backup / export / restore
+
+App exports (owner or manager, signed in):
 
 - Truck fuel CSV: `/api/reports/fuel.csv`
 - IFTA-ready fuel CSV: `/api/reports/ifta-fuel.csv`
-- Use Supabase backups for Postgres + Storage
-- Retention cannot drop below four years
+- Organization JSON: `/api/org/export.json` (owner)
+- Audit log CSV: `/api/audit/export.csv`
+- Receipt originals ZIP: `/api/receipts/export-zip?ids=`
+- Fleet CSV templates: `/api/imports/templates/{trucks|drivers|assignments|fuel-prices}`
+
+Database and Storage restore:
+
+1. Use the Supabase project backup (Settings → Database → Backups). Point-in-time recovery is on paid plans.
+2. Storage objects in `fuel-receipts` are not rewritten. Restore the bucket from a Storage backup or object-level copy if a region fails.
+3. After restore, confirm RLS is still enabled and `fuel-receipts` remains private.
+4. Retention cannot drop below four years in organization settings.
+
+Deactivate a company from `/internal` (platform admin). That blocks sign-in without deleting receipt evidence.
 
 ## Production smoke tests
 

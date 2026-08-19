@@ -4,6 +4,7 @@
 
 - `owner_admin`: organization settings, invites, deactivation
 - `manager`: trucks, receipts, reports, prices, routes
+- `auditor`: read-only staff access to receipts, reports, and audit
 - `driver`: own profile, assigned truck, own receipts, issued fuel-stop recommendations
 
 Deactivated profiles (`is_active = false`) cannot use the app even with a valid session.

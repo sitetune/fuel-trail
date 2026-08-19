@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/input";
 import { updateOrgSettingsAction } from "../actions";
 import { requireManagement } from "@/lib/auth/session";
+import { parseReviewRules } from "@/lib/orgs/review-rules";
 
 export default async function SettingsPage({
   searchParams,
@@ -15,6 +16,7 @@ export default async function SettingsPage({
     return <p>Only the owner can change organization security and retention settings.</p>;
   }
   const org = user.organization;
+  const rules = parseReviewRules(org.review_rules);
   return (
     <Card className="max-w-xl space-y-3">
       <h1 className="text-3xl font-semibold">Organization settings</h1>
@@ -49,6 +51,26 @@ export default async function SettingsPage({
         <Input id="primary_contact_email" name="primary_contact_email" type="email" defaultValue={org.primary_contact_email ?? ""} />
         <Label htmlFor="retention_years">Retention years (minimum 4)</Label>
         <Input id="retention_years" name="retention_years" type="number" min={4} defaultValue={org.retention_years} />
+        <fieldset className="space-y-2 rounded-md border p-3">
+          <legend className="font-medium">Receipt review rules</legend>
+          <p className="text-sm text-[#5E6B75]">Drivers cannot submit until these fields are filled.</p>
+          <label className="flex min-h-11 items-center gap-2 text-sm">
+            <input type="checkbox" name="require_odometer" className="h-5 w-5" defaultChecked={rules.requireOdometer} />
+            Require odometer
+          </label>
+          <label className="flex min-h-11 items-center gap-2 text-sm">
+            <input type="checkbox" name="require_receipt_number" className="h-5 w-5" defaultChecked={rules.requireReceiptNumber} />
+            Require receipt / transaction number
+          </label>
+          <label className="flex min-h-11 items-center gap-2 text-sm">
+            <input type="checkbox" name="require_payment_last4" className="h-5 w-5" defaultChecked={rules.requirePaymentLast4} />
+            Require card last four
+          </label>
+          <label className="flex min-h-11 items-center gap-2 text-sm">
+            <input type="checkbox" name="require_tank_level" className="h-5 w-5" defaultChecked={rules.requireTankLevel} />
+            Require tank level after fueling
+          </label>
+        </fieldset>
         <Button type="submit" variant="amber">
           Save settings
         </Button>

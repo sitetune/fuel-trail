@@ -21,4 +21,8 @@ test("company signup form is reachable", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "Create your company" })).toBeVisible();
   await expect(page.getByLabel("Company name")).toBeVisible();
   await expect(page.getByLabel("Work email")).toBeVisible();
+  const scrollWidth = await page.evaluate(
+    () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+  );
+  expect(scrollWidth).toBeLessThanOrEqual(1);
 });

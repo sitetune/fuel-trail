@@ -33,7 +33,7 @@ export function NotificationPreferences({
       <div>
         <h2 className="font-semibold">Email preferences</h2>
         <p className="text-sm text-[#5E6B75]">
-          In-app alerts always appear. Email is not sending yet; these choices will apply when company email is enabled.
+          In-app alerts always appear. Email is sent only when a Resend key is configured and you check a box below.
         </p>
       </div>
       <form

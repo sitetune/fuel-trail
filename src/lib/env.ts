@@ -18,6 +18,8 @@ const serverSchema = publicSchema.extend({
   CRON_SECRET: z.string().optional(),
   SIGNUP_AUTO_ACTIVATE: z.string().optional(),
   PLATFORM_ADMIN_EMAILS: z.string().optional(),
+  RESEND_API_KEY: z.string().optional(),
+  RESEND_FROM_EMAIL: z.string().optional(),
 });
 
 export function getPublicEnv() {
@@ -46,6 +48,8 @@ export function getServerEnv() {
     CRON_SECRET: process.env.CRON_SECRET,
     SIGNUP_AUTO_ACTIVATE: process.env.SIGNUP_AUTO_ACTIVATE,
     PLATFORM_ADMIN_EMAILS: process.env.PLATFORM_ADMIN_EMAILS,
+    RESEND_API_KEY: process.env.RESEND_API_KEY?.trim() || undefined,
+    RESEND_FROM_EMAIL: process.env.RESEND_FROM_EMAIL?.trim() || undefined,
   });
 }
 

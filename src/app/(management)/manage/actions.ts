@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { requireOwner, requireWriteManagement } from "@/lib/auth/session";
+import { parseReviewRules, serializeReviewRules } from "@/lib/orgs/review-rules";
 
 export async function upsertTruckAction(formData: FormData) {
   const user = await requireWriteManagement();
@@ -136,6 +137,14 @@ export async function updateOrgSettingsAction(formData: FormData) {
       primary_contact_name: String(formData.get("primary_contact_name") || "") || null,
       primary_contact_email: String(formData.get("primary_contact_email") || "") || null,
       retention_years: retention,
+      review_rules: serializeReviewRules(
+        parseReviewRules({
+          require_odometer: formData.get("require_odometer") === "on",
+          require_receipt_number: formData.get("require_receipt_number") === "on",
+          require_payment_last4: formData.get("require_payment_last4") === "on",
+          require_tank_level: formData.get("require_tank_level") === "on",
+        }),
+      ),
     })
     .eq("id", user.organization.id);
   redirect("/manage/settings?saved=1");

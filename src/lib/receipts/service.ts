@@ -304,7 +304,12 @@ export async function submitReceipt(user: SessionUser, receiptId: string, payloa
     .maybeSingle();
   const warnings = validateReceiptMath(
     { ...parsed, tankCapacityGallons: Number(truck.tank_capacity_gallons), previousOdometer: previous?.odometer },
+    { rules: user.organization.review_rules },
   );
+  const blocking = warnings.filter((warning) => warning.severity === "error" && warning.code.startsWith("rule_"));
+  if (blocking.length) {
+    throw new Error(blocking[0].message);
+  }
   const { pricePerGallon, derived } = derivePricePerGallon(parsed);
   const signature = duplicateReceiptSignature({
     organizationId: user.organization.id,

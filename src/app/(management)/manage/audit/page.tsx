@@ -3,7 +3,6 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/input";
-import { toCsv } from "@/lib/reports/csv";
 import Link from "next/link";
 
 export default async function AuditLogPage({
@@ -24,17 +23,6 @@ export default async function AuditLogPage({
   if (entityType) query = query.eq("entity_type", entityType);
   if (q) query = query.or(`event_type.ilike.%${q}%,entity_type.ilike.%${q}%`);
   const { data: events } = await query;
-  const csv = toCsv(
-    ["created_at", "actor", "event_type", "entity_type", "entity_id", "metadata"],
-    (events ?? []).map((event) => [
-      event.created_at,
-      (event.profiles as { full_name?: string } | null)?.full_name ?? "",
-      event.event_type,
-      event.entity_type,
-      event.entity_id,
-      JSON.stringify(event.metadata ?? {}),
-    ]),
-  );
 
   return (
     <div className="space-y-4">
@@ -44,7 +32,10 @@ export default async function AuditLogPage({
           <p className="text-sm text-[#5E6B75]">Append-only organization events. Receipt field changes also appear on each receipt.</p>
         </div>
         <Button asChild variant="outline">
-          <a href={`data:text/csv;charset=utf-8,${encodeURIComponent(csv)}`} download="fueltrail-audit-log.csv">
+          <a
+            href={`/api/audit/export.csv?q=${encodeURIComponent(q)}&entityType=${encodeURIComponent(entityType)}`}
+            download="fueltrail-audit-log.csv"
+          >
             Download CSV
           </a>
         </Button>

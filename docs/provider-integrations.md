@@ -20,6 +20,10 @@ If the key is missing or the API fails, FuelTrail keeps the original image and s
 
 To add another OCR vendor, implement `ReceiptOcrProvider` and select it from `getReceiptOcrProvider()`.
 
+## Receipt OCR — Gemini
+
+`RECEIPT_OCR_PROVIDER=gemini` or `auto` uses Gemini vision when `GEMINI_API_KEY` is set. The model returns loose JSON; FuelTrail keeps whatever merchant/date/gallons/total it can parse. The driver must still confirm every field. If Gemini fails, a second pass may use Tesseract in the browser when merchant or date is missing. Original images are never overwritten.
+
 Mindee V2 (`api-v2.mindee.net`) uses model IDs and a different key space. `MINDEE_MODEL_ID` is reserved in `.env.example` for a future adapter; the MVP uses V1 Receipt V5 because it is the documented off-the-shelf receipt product.
 
 ## Routing / fuel — HERE

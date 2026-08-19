@@ -3,6 +3,7 @@ import { ReceiptReviewForm } from "@/components/driver/receipt-review-form";
 import { requireSession } from "@/lib/auth/session";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { driverCanEditReceipt } from "@/lib/receipts/states";
+import { parseReviewRules } from "@/lib/orgs/review-rules";
 import type { ReceiptStatus } from "@/types/domain";
 
 export default async function ReviewReceiptPage({
@@ -31,6 +32,7 @@ export default async function ReviewReceiptPage({
         extraction={receipt.ocr_extracted_json as never}
         status={receipt.status}
         rejectionReason={receipt.rejection_reason}
+        rules={parseReviewRules(user.organization.review_rules)}
       />
     </div>
   );

@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { roundTo } from "@/lib/calculations/math";
+import { parseReviewRules, type ReviewRules } from "@/lib/orgs/review-rules";
 
 export const US_CA_REGIONS = [
   "AL","AK","AZ","AR","CA","CO","CT","DE","FL","GA","HI","ID","IL","IN","IA","KS","KY","LA","ME","MD",
@@ -68,11 +69,12 @@ export function derivePricePerGallon(input: {
 
 export function validateReceiptMath(
   input: ReceiptReviewInput & { tankCapacityGallons: number; previousOdometer?: number | null },
-  options?: { tolerance?: number; now?: Date },
+  options?: { tolerance?: number; now?: Date; rules?: ReviewRules | unknown },
 ): ReceiptWarning[] {
   const warnings: ReceiptWarning[] = [];
   const now = options?.now ?? new Date();
   const tolerance = options?.tolerance ?? 0.08;
+  const rules = parseReviewRules(options?.rules);
   const purchasedAt = new Date(input.purchasedAt);
 
   if (Number.isNaN(purchasedAt.getTime())) {
@@ -164,6 +166,35 @@ export function validateReceiptMath(
         severity: "error",
       });
     }
+  }
+
+  if (rules.requireOdometer && (input.odometer == null || Number.isNaN(Number(input.odometer)))) {
+    warnings.push({
+      code: "rule_odometer",
+      message: "This company requires an odometer reading on every receipt.",
+      severity: "error",
+    });
+  }
+  if (rules.requireReceiptNumber && !input.receiptNumber?.trim()) {
+    warnings.push({
+      code: "rule_receipt_number",
+      message: "This company requires a receipt or transaction number.",
+      severity: "error",
+    });
+  }
+  if (rules.requirePaymentLast4 && !input.paymentLast4?.trim()) {
+    warnings.push({
+      code: "rule_payment_last4",
+      message: "This company requires the last four digits of the payment card.",
+      severity: "error",
+    });
+  }
+  if (rules.requireTankLevel && input.tankLevelAfterMode === "unknown") {
+    warnings.push({
+      code: "rule_tank_level",
+      message: "This company requires tank level after fueling (full, percent, or gallons).",
+      severity: "error",
+    });
   }
 
   return warnings;

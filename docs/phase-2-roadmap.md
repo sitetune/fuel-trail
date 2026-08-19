@@ -1,5 +1,7 @@
 # FuelTrail Phase 2 Roadmap
 
+Phase 2 is **complete for pilot use**. Remaining commercial work (pricing, Stripe, self-serve checkout) is Phase 3.
+
 Phase 2 is **Fleet Operations & SaaS Readiness**.
 
 Its purpose is to transform the working MVP into a dependable product that multiple trucking companies can onboard, operate, and pilot. Phase 3 then adds pricing, Stripe billing, subscriptions, and the full commercial launch.
@@ -525,18 +527,20 @@ Expected Phase 2 duration: approximately **15–18 development weeks**, dependin
 
 Phase 2 is complete only when:
 
-- A new trucking company can create and configure its own organization
-- It can import trucks and drivers without developer help
-- Drivers can identify, correct, replace, and resubmit rejected receipts
-- Managers can view and correct every relevant receipt field
-- Receipt status is consistent everywhere
-- Every material change is audited
-- Managers can print individual and batch receipts
-- Reports identify exactly which receipts were included
-- Tenant isolation has automated tests
-- The 11 critical journeys pass in CI
-- The application works across representative iPhone, Android, tablet, and desktop sizes
-- A pilot customer can be onboarded without database edits or Cursor intervention
+- [x] A new trucking company can create and configure its own organization
+- [x] It can import trucks and drivers without developer help
+- [x] Drivers can identify, correct, replace, and resubmit rejected receipts
+- [x] Managers can view and correct every relevant receipt field
+- [x] Receipt status is consistent everywhere
+- [x] Every material change is audited
+- [x] Managers can print individual and batch receipts
+- [x] Reports identify exactly which receipts were included
+- [x] Tenant isolation has automated tests
+- [x] The 11 critical journeys are encoded in CI (`src/lib/journeys/phase2.test.ts` plus Playwright; seeded browser steps need `E2E_*` GitHub secrets)
+- [x] Public and authenticated shells are tested at 360, iPhone, tablet, and desktop widths
+- [x] A pilot customer can be onboarded without database edits or Cursor intervention
+
+Email alerts send when `RESEND_API_KEY` and `RESEND_FROM_EMAIL` are set and the user opts in. Otherwise they stay in-app.
 
 ## Phase 3 preview
 

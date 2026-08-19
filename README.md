@@ -89,6 +89,8 @@ Demo users from `pnpm seed:demo` (password `FuelTrail-demo-1` unless overridden)
 | `FUEL_ROUTE_PROVIDER` | `manual` (default) or `here` |
 | `HERE_API_KEY` | Optional Routing API v8 key |
 | `CRON_SECRET` | Reserved for future jobs |
+| `RESEND_API_KEY` | Optional. Sends alert emails when a user opts in |
+| `RESEND_FROM_EMAIL` | Verified Resend from address, e.g. `FuelTrail <alerts@yourdomain.com>` |
 
 If Mindee is selected but misconfigured, the app falls back to manual entry and keeps the original image. If HERE lacks Fuel Prices access, routing/manual prices still work.
 
@@ -102,7 +104,9 @@ pnpm test:e2e
 pnpm build
 ```
 
-Playwright starts the app on port 3021. Authenticated journeys require `E2E_DRIVER_EMAIL` / `E2E_MANAGER_EMAIL` after seeding. GitHub Actions runs lint, typecheck, unit tests, and build. Playwright is a separate workflow you can enable after a seeded project exists.
+Playwright starts the app on port 3021 and runs public pages on phone, tablet, and desktop viewports. The 11 Phase 2 journeys live in `tests/e2e/journeys.spec.ts`. Authenticated journeys need `E2E_DRIVER_EMAIL` / `E2E_MANAGER_EMAIL` (and matching passwords) after `pnpm seed:demo`. GitHub Actions always runs the public and journey files; seeded steps skip unless those secrets are set on the repository.
+
+Domain coverage for the same 11 journeys also runs in `pnpm test` (`src/lib/journeys/phase2.test.ts`).
 
 ## Vercel
 

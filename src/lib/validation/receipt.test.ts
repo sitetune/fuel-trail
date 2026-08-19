@@ -49,4 +49,25 @@ describe("receipt validation", () => {
     );
     expect(future.some((warning) => warning.code === "future_date")).toBe(true);
   });
+
+  it("enforces organization review rules as errors", () => {
+    const warnings = validateReceiptMath(
+      { ...base, odometer: null, receiptNumber: null, paymentLast4: null, tankLevelAfterMode: "unknown" },
+      {
+        now: new Date("2026-08-18T13:00:00Z"),
+        rules: {
+          require_odometer: true,
+          require_receipt_number: true,
+          require_payment_last4: true,
+          require_tank_level: true,
+        },
+      },
+    );
+    expect(warnings.map((warning) => warning.code)).toEqual(
+      expect.arrayContaining(["rule_odometer", "rule_receipt_number", "rule_payment_last4", "rule_tank_level"]),
+    );
+    expect(warnings.filter((warning) => warning.code.startsWith("rule_")).every((warning) => warning.severity === "error")).toBe(
+      true,
+    );
+  });
 });

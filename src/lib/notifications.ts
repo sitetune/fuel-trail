@@ -1,4 +1,5 @@
 import { createServiceRoleClient } from "@/lib/supabase/admin";
+import { sendNotificationEmail } from "@/lib/notifications/email";
 
 export const NOTIFICATION_EVENTS = [
   "receipt_uploaded",
@@ -34,18 +35,45 @@ export async function notify(input: NotifyInput) {
   if (recipientIds.length === 0) return;
   try {
     const admin = createServiceRoleClient();
-    const rows = recipientIds.map((recipientId) => ({
-      organization_id: input.organizationId,
-      recipient_id: recipientId,
-      event_type: input.eventType,
-      title: input.title,
-      body: input.body,
-      href: input.href ?? null,
-      entity_type: input.entityType ?? null,
-      entity_id: input.entityId ?? null,
-      email_status: "skipped",
-      idempotency_key: `${input.idempotencyKey ?? `${input.eventType}:${input.entityId ?? "none"}`}:${recipientId}`,
-    }));
+    const [{ data: profiles }, { data: prefs }] = await Promise.all([
+      admin.from("profiles").select("id, email").in("id", recipientIds),
+      admin.from("notification_preferences").select("profile_id, email_events").in("profile_id", recipientIds),
+    ]);
+    const emailById = new Map((profiles ?? []).map((row) => [row.id as string, row.email as string]));
+    const prefsById = new Map(
+      (prefs ?? []).map((row) => [row.profile_id as string, (row.email_events ?? {}) as Record<string, boolean>]),
+    );
+    const rows = [];
+    for (const recipientId of recipientIds) {
+      const wantsEmail = Boolean(prefsById.get(recipientId)?.[input.eventType]);
+      const to = emailById.get(recipientId);
+      let emailStatus: "skipped" | "sent" | "failed" = "skipped";
+      if (wantsEmail && to) {
+        try {
+          emailStatus = await sendNotificationEmail({
+            to,
+            eventType: input.eventType,
+            title: input.title,
+            body: input.body,
+            href: input.href,
+          });
+        } catch {
+          emailStatus = "failed";
+        }
+      }
+      rows.push({
+        organization_id: input.organizationId,
+        recipient_id: recipientId,
+        event_type: input.eventType,
+        title: input.title,
+        body: input.body,
+        href: input.href ?? null,
+        entity_type: input.entityType ?? null,
+        entity_id: input.entityId ?? null,
+        email_status: emailStatus,
+        idempotency_key: `${input.idempotencyKey ?? `${input.eventType}:${input.entityId ?? "none"}`}:${recipientId}`,
+      });
+    }
     const { error } = await admin.from("notifications").upsert(rows, {
       onConflict: "idempotency_key",
       ignoreDuplicates: true,

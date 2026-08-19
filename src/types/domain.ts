@@ -101,6 +101,7 @@ export type Organization = {
   status?: string;
   logo_path?: string | null;
   onboarded_at?: string | null;
+  review_rules?: Record<string, boolean> | null;
 };
 
 export type Truck = {

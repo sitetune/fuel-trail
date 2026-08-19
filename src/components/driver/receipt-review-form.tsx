@@ -41,6 +41,7 @@ export function ReceiptReviewForm({
   extraction,
   status,
   rejectionReason,
+  rules,
 }: {
   receiptId: string;
   truckId: string;
@@ -49,6 +50,12 @@ export function ReceiptReviewForm({
   extraction: NormalizedReceiptExtraction | null;
   status?: string;
   rejectionReason?: string | null;
+  rules?: {
+    requireOdometer?: boolean;
+    requireReceiptNumber?: boolean;
+    requirePaymentLast4?: boolean;
+    requireTankLevel?: boolean;
+  };
 }) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
@@ -123,6 +130,7 @@ export function ReceiptReviewForm({
       pricePerGallon: formData.get("pricePerGallon") ? Number(formData.get("pricePerGallon")) : null,
       totalAmount: Number(formData.get("totalAmount")),
       odometer: formData.get("odometer") ? Number(formData.get("odometer")) : null,
+      paymentLast4: String(formData.get("paymentLast4") || "") || null,
       tankLevelAfterMode: String(formData.get("tankLevelAfterMode")),
       tankLevelAfterValue: formData.get("tankLevelAfterValue")
         ? Number(formData.get("tankLevelAfterValue"))
@@ -252,10 +260,11 @@ export function ReceiptReviewForm({
         />
       </div>
       <div>
-        <Label htmlFor="receiptNumber">Receipt number</Label>
+        <Label htmlFor="receiptNumber">Receipt number{rules?.requireReceiptNumber ? " (required)" : ""}</Label>
         <Input
           id="receiptNumber"
           name="receiptNumber"
+          required={Boolean(rules?.requireReceiptNumber)}
           className={highlight(fields?.receiptNumber?.confidence ?? null, !fields?.receiptNumber?.value)}
           defaultValue={fields?.receiptNumber?.value ?? ""}
         />
@@ -305,15 +314,24 @@ export function ReceiptReviewForm({
           defaultValue={numberValue(fields?.totalAmount?.value)}
         />
       </div>
-      <Input name="odometer" type="number" step="0.1" placeholder="Odometer (optional)" />
       <div>
-        <Label htmlFor="tankLevelAfterMode">Tank after fueling</Label>
+        <Label htmlFor="odometer">Odometer{rules?.requireOdometer ? " (required)" : ""}</Label>
+        <Input id="odometer" name="odometer" type="number" step="0.1" required={Boolean(rules?.requireOdometer)} placeholder="Odometer" />
+      </div>
+      <div>
+        <Label htmlFor="paymentLast4">Card last four{rules?.requirePaymentLast4 ? " (required)" : ""}</Label>
+        <Input id="paymentLast4" name="paymentLast4" maxLength={4} required={Boolean(rules?.requirePaymentLast4)} inputMode="numeric" />
+      </div>
+      <div>
+        <Label htmlFor="tankLevelAfterMode">Tank after fueling{rules?.requireTankLevel ? " (required)" : ""}</Label>
         <select
           id="tankLevelAfterMode"
           name="tankLevelAfterMode"
           className="h-11 w-full rounded-md border border-[#5E6B75]/30 px-3"
-          defaultValue="unknown"
+          defaultValue={rules?.requireTankLevel ? "" : "unknown"}
+          required={Boolean(rules?.requireTankLevel)}
         >
+          {rules?.requireTankLevel ? <option value="">Select tank level</option> : null}
           <option value="unknown">Unknown</option>
           <option value="full">Full</option>
           <option value="percent">Percent</option>

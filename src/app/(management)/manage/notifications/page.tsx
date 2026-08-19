@@ -2,7 +2,7 @@ import { NotificationInbox } from "@/components/notifications/notification-inbox
 import { NotificationPreferences } from "@/components/notifications/notification-preferences";
 import { requireManagement } from "@/lib/auth/session";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
-import type { NotificationEvent } from "@/lib/notifications";
+import type { NotificationEvent } from "@/lib/notifications/events";
 
 export default async function ManageNotificationsPage() {
   const user = await requireManagement();

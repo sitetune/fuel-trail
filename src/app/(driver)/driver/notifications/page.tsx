@@ -2,7 +2,7 @@ import { NotificationInbox } from "@/components/notifications/notification-inbox
 import { NotificationPreferences } from "@/components/notifications/notification-preferences";
 import { requireSession } from "@/lib/auth/session";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
-import type { NotificationEvent } from "@/lib/notifications";
+import type { NotificationEvent } from "@/lib/notifications/events";
 import { redirect } from "next/navigation";
 
 export default async function DriverNotificationsPage() {

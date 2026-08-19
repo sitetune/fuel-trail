@@ -1,6 +1,6 @@
 import { getServerEnv } from "@/lib/env";
 import { brand } from "@/config/brand";
-import type { NotificationEvent } from "@/lib/notifications";
+import type { NotificationEvent } from "@/lib/notifications/events";
 
 export async function sendNotificationEmail(input: {
   to: string;

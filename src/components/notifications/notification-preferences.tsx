@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { NOTIFICATION_EVENTS, type NotificationEvent } from "@/lib/notifications";
+import { NOTIFICATION_EVENTS, type NotificationEvent } from "@/lib/notifications/events";
 
 const LABELS: Record<NotificationEvent, string> = {
   receipt_uploaded: "Receipt uploaded",

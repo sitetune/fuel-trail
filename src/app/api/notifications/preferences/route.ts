@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { AuthError, requireSession } from "@/lib/auth/session";
 import { apiError, apiOk } from "@/lib/api/http";
-import { NOTIFICATION_EVENTS } from "@/lib/notifications";
+import { NOTIFICATION_EVENTS } from "@/lib/notifications/events";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 const bodySchema = z.object({

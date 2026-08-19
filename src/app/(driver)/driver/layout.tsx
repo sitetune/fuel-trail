@@ -27,6 +27,17 @@ export default async function DriverLayout({ children }: { children: ReactNode }
       <OfflineBadge />
       <header className="flex items-center justify-between gap-3 border-b border-[#5E6B75]/20 bg-white px-4 py-3">
         <BrandLockup href="/driver" />
+        <nav className="flex min-h-11 items-center gap-3 overflow-x-auto text-sm font-medium">
+          <Link href="/driver" className="shrink-0">
+            Home
+          </Link>
+          <Link href="/driver/receipts" className="shrink-0">
+            Receipts
+          </Link>
+          <Link href="/driver/queue" className="shrink-0">
+            Queue
+          </Link>
+        </nav>
         <SignOutButton />
       </header>
       <div className="flex-1 px-4 py-4">{children}</div>

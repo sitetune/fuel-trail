@@ -27,7 +27,7 @@ src/app/(driver)/driver   Driver home, capture, review, offline queue
 src/app/(management)/manage  Truck-first dashboard, receipts, reports, planning
 src/app/api               Auth-checked route handlers
 src/lib/calculations      Pure, unit-tested math
-src/lib/ocr               ReceiptOcrProvider (manual + Mindee)
+src/lib/ocr               ReceiptOcrProvider (manual, Mindee, Gemini, OpenAI)
 src/lib/routing           FuelRouteProvider (manual + HERE)
 supabase/migrations       Schema, RLS, private storage, views
 ```
@@ -83,7 +83,8 @@ Demo users from `pnpm seed:demo` (password `FuelTrail-demo-1` unless overridden)
 | `NEXT_PUBLIC_SUPABASE_URL` | Project URL |
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Browser/server cookie client (publishable / anon) |
 | `SUPABASE_SERVICE_ROLE_KEY` | Server only: invites, signed uploads |
-| `RECEIPT_OCR_PROVIDER` | `manual` (default) or `mindee` |
+| `RECEIPT_OCR_PROVIDER` | `auto` (default), `manual`, `mindee`, `gemini`, or `openai` |
+| `GEMINI_API_KEY` | Optional Google AI Studio key for vision receipt OCR |
 | `MINDEE_API_KEY` | Mindee V1 expense receipts key |
 | `FUEL_ROUTE_PROVIDER` | `manual` (default) or `here` |
 | `HERE_API_KEY` | Optional Routing API v8 key |

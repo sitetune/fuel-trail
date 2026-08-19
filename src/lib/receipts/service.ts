@@ -3,8 +3,9 @@ import { duplicateReceiptSignature, estimateFuel, isoDateInTimezone, sha256Hex }
 import { derivePricePerGallon, receiptReviewSchema, validateReceiptMath } from "@/lib/validation/receipt";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
-import type { SessionUser } from "@/types/domain";
+import type { ReceiptStatus, SessionUser } from "@/types/domain";
 import { getReceiptOcrProvider } from "@/lib/ocr";
+import { assertReceiptTransition, driverCanReplaceImage } from "./states";
 
 export function storageOriginalPath(input: {
   organizationId: string;
@@ -85,6 +86,10 @@ export async function initiateReceipt(user: SessionUser, body: { clientReceiptUu
   };
 }
 
+function throwIfError(error: { message: string } | null, fallback: string) {
+  if (error) throw new Error(error.message || fallback);
+}
+
 export async function completeUpload(user: SessionUser, receiptId: string, sha256: string) {
   const supabase = await createServerSupabaseClient();
   const { data: receipt } = await supabase
@@ -103,7 +108,7 @@ export async function completeUpload(user: SessionUser, receiptId: string, sha25
     .eq("original_sha256", sha256)
     .neq("id", receiptId)
     .maybeSingle();
-  await supabase
+  const { error: uploadError } = await supabase
     .from("fuel_receipts")
     .update({
       original_sha256: sha256,
@@ -111,6 +116,7 @@ export async function completeUpload(user: SessionUser, receiptId: string, sha25
       duplicate_of: exactDup?.id ?? receipt.duplicate_of,
     })
     .eq("id", receiptId);
+  throwIfError(uploadError, "Could not confirm the uploaded image.");
   await supabase.from("receipt_audit_events").insert({
     organization_id: user.organization.id,
     receipt_id: receiptId,
@@ -274,7 +280,10 @@ export async function submitReceipt(user: SessionUser, receiptId: string, payloa
   });
 
   const overCapacity = warnings.some((warning) => warning.code === "over_capacity");
-  const status = likelyDup || overCapacity ? "needs_review" : "submitted";
+  const nextStatus: ReceiptStatus = likelyDup || overCapacity ? "needs_review" : "submitted";
+  const currentStatus = receipt.status as ReceiptStatus;
+  assertReceiptTransition(currentStatus, nextStatus);
+  const resubmitting = currentStatus === "rejected";
 
   const fieldChanges = {
     gallons: { before: receipt.gallons, after: parsed.gallons },
@@ -282,7 +291,7 @@ export async function submitReceipt(user: SessionUser, receiptId: string, payloa
     merchant_name: { before: receipt.merchant_name, after: parsed.merchantName },
   };
 
-  await supabase
+  const { error: submitError } = await supabase
     .from("fuel_receipts")
     .update({
       truck_id: parsed.truckId,
@@ -310,16 +319,20 @@ export async function submitReceipt(user: SessionUser, receiptId: string, payloa
       receipt_signature: signature,
       duplicate_of: likelyDup?.id ?? receipt.duplicate_of,
       warnings,
-      status,
-      submitted_at: status === "submitted" ? new Date().toISOString() : null,
+      status: nextStatus,
+      submitted_at: nextStatus === "submitted" || resubmitting ? new Date().toISOString() : receipt.submitted_at,
+      rejected_at: resubmitting ? null : receipt.rejected_at,
+      rejected_by: resubmitting ? null : receipt.rejected_by,
+      rejection_reason: resubmitting ? null : receipt.rejection_reason,
     })
     .eq("id", receiptId);
+  throwIfError(submitError, "Could not submit receipt.");
 
   await supabase.from("receipt_audit_events").insert({
     organization_id: user.organization.id,
     receipt_id: receiptId,
     actor_id: user.authUserId,
-    event_type: "submitted",
+    event_type: resubmitting ? "resubmitted" : "submitted",
     field_changes: fieldChanges,
     metadata: { warnings, likelyDuplicateOf: likelyDup?.id ?? null },
   });
@@ -338,7 +351,7 @@ export async function submitReceipt(user: SessionUser, receiptId: string, payloa
   });
 
   return {
-    status,
+    status: nextStatus,
     warnings,
     likelyDuplicateOf: likelyDup?.id ?? null,
     gallons: parsed.gallons,
@@ -349,41 +362,87 @@ export async function submitReceipt(user: SessionUser, receiptId: string, payloa
 export const verifySchema = z.object({
   action: z.enum(["verify", "reject", "override_duplicate", "archive"]),
   reason: z.string().optional(),
-  corrections: z.record(z.string(), z.unknown()).optional(),
+  managerNote: z.string().optional(),
+  corrections: z
+    .object({
+      truck_id: z.string().uuid().optional(),
+      driver_id: z.string().uuid().optional(),
+      purchased_at: z.string().optional(),
+      merchant_name: z.string().optional(),
+      merchant_address: z.string().optional(),
+      merchant_city: z.string().optional(),
+      merchant_region: z.string().optional(),
+      merchant_postal_code: z.string().nullable().optional(),
+      receipt_number: z.string().nullable().optional(),
+      fuel_type: z.string().optional(),
+      gallons: z.coerce.number().positive().optional(),
+      price_per_gallon: z.coerce.number().positive().nullable().optional(),
+      subtotal_amount: z.coerce.number().nonnegative().nullable().optional(),
+      tax_amount: z.coerce.number().nonnegative().nullable().optional(),
+      other_purchases_amount: z.coerce.number().nonnegative().nullable().optional(),
+      total_amount: z.coerce.number().positive().optional(),
+      odometer: z.coerce.number().nonnegative().nullable().optional(),
+      payment_last4: z
+        .string()
+        .regex(/^\d{4}$/)
+        .nullable()
+        .optional(),
+      trailer_attached: z.boolean().nullable().optional(),
+      trailer_dropped: z.boolean().optional(),
+      trailer_parking_notes: z.string().nullable().optional(),
+      driver_note: z.string().nullable().optional(),
+      manager_note: z.string().nullable().optional(),
+    })
+    .optional(),
 });
 
 export async function manageReceipt(user: SessionUser, receiptId: string, payload: z.infer<typeof verifySchema>) {
   const supabase = await createServerSupabaseClient();
   const { data: receipt } = await supabase.from("fuel_receipts").select("*").eq("id", receiptId).single();
   if (!receipt) throw new Error("Receipt not found.");
+  const currentStatus = receipt.status as ReceiptStatus;
   const updates: Record<string, unknown> = {};
   const fieldChanges: Record<string, { before: unknown; after: unknown }> = {};
-  if (payload.corrections) {
+  if (payload.action !== "reject" && payload.corrections) {
     for (const [key, value] of Object.entries(payload.corrections)) {
+      if (value === undefined) continue;
       fieldChanges[key] = { before: receipt[key as keyof typeof receipt], after: value };
       updates[key] = value;
     }
   }
+  if (payload.managerNote) {
+    updates.manager_note = payload.managerNote;
+  }
+  let nextStatus = currentStatus;
   if (payload.action === "verify") {
+    nextStatus = "verified";
     updates.status = "verified";
     updates.verified_at = new Date().toISOString();
     updates.verified_by = user.authUserId;
   }
   if (payload.action === "reject") {
+    nextStatus = "rejected";
     updates.status = "rejected";
-    updates.rejection_reason = payload.reason ?? "Rejected";
+    updates.rejection_reason = payload.reason?.trim() || "Rejected";
+    updates.rejected_at = new Date().toISOString();
+    updates.rejected_by = user.authUserId;
+    if (payload.managerNote) updates.manager_note = payload.managerNote;
   }
   if (payload.action === "override_duplicate") {
+    nextStatus = "verified";
     updates.duplicate_override = true;
     updates.status = "verified";
     updates.verified_at = new Date().toISOString();
     updates.verified_by = user.authUserId;
   }
   if (payload.action === "archive") {
+    nextStatus = "archived";
     updates.status = "archived";
   }
-  await supabase.from("fuel_receipts").update(updates).eq("id", receiptId);
-  await supabase.from("receipt_audit_events").insert({
+  assertReceiptTransition(currentStatus, nextStatus);
+  const { error: updateError } = await supabase.from("fuel_receipts").update(updates).eq("id", receiptId);
+  throwIfError(updateError, "Could not update receipt status.");
+  const { error: auditError } = await supabase.from("receipt_audit_events").insert({
     organization_id: user.organization.id,
     receipt_id: receiptId,
     actor_id: user.authUserId,
@@ -395,10 +454,68 @@ export async function manageReceipt(user: SessionUser, receiptId: string, payloa
           : payload.action === "override_duplicate"
             ? "duplicate_overridden"
             : "archived",
-    field_changes: Object.keys(fieldChanges).length ? fieldChanges : null,
-    metadata: { reason: payload.reason ?? null },
+    field_changes: Object.keys(fieldChanges).length ? fieldChanges : { status: { before: currentStatus, after: nextStatus } },
+    metadata: { reason: payload.reason ?? null, from: currentStatus, to: nextStatus },
   });
-  return { ok: true };
+  throwIfError(auditError, "Receipt was updated but the audit event could not be recorded.");
+  return { ok: true, status: nextStatus };
+}
+
+export async function initiateImageReplace(user: SessionUser, receiptId: string, fileName: string) {
+  const supabase = await createServerSupabaseClient();
+  const { data: receipt } = await supabase.from("fuel_receipts").select("*").eq("id", receiptId).single();
+  if (!receipt) throw new Error("Receipt not found.");
+  if (receipt.driver_id !== user.authUserId) throw new Error("Only the submitting driver can replace this image.");
+  if (!driverCanReplaceImage(receipt.status as ReceiptStatus)) {
+    throw new Error("This receipt image can no longer be replaced.");
+  }
+  const ext = (fileName.split(".").pop() ?? "jpg").toLowerCase().replace("jpeg", "jpg");
+  const path = storageOriginalPath({
+    organizationId: user.organization.id,
+    truckId: receipt.truck_id,
+    receiptId,
+    purchasedAt: receipt.purchased_at ? new Date(receipt.purchased_at) : new Date(),
+    ext,
+  });
+  const { error } = await supabase.from("fuel_receipts").update({ pending_original_path: path }).eq("id", receiptId);
+  throwIfError(error, "Could not start image replacement.");
+  const admin = createServiceRoleClient();
+  const { data: signed, error: signedError } = await admin.storage.from("fuel-receipts").createSignedUploadUrl(path);
+  if (signedError || !signed) throw new Error("Could not authorize replacement upload.");
+  return { receiptId, path, token: signed.token, signedUrl: signed.signedUrl };
+}
+
+export async function completeImageReplace(user: SessionUser, receiptId: string, sha256: string) {
+  const supabase = await createServerSupabaseClient();
+  const { data: receipt } = await supabase.from("fuel_receipts").select("*").eq("id", receiptId).single();
+  if (!receipt) throw new Error("Receipt not found.");
+  if (receipt.driver_id !== user.authUserId) throw new Error("Only the submitting driver can replace this image.");
+  const pendingPath = receipt.pending_original_path as string | null;
+  if (!pendingPath) throw new Error("No replacement image is waiting to be saved.");
+  const prior = Array.isArray(receipt.prior_original_paths) ? receipt.prior_original_paths : [];
+  if (receipt.original_image_path) prior.push(receipt.original_image_path);
+  const currentStatus = receipt.status as ReceiptStatus;
+  assertReceiptTransition(currentStatus, "needs_review");
+  const { error } = await supabase
+    .from("fuel_receipts")
+    .update({
+      prior_original_paths: prior,
+      original_image_path: pendingPath,
+      pending_original_path: null,
+      original_sha256: sha256,
+      version: Number(receipt.version ?? 1) + 1,
+      status: "needs_review",
+    })
+    .eq("id", receiptId);
+  throwIfError(error, "Could not save the replacement image.");
+  await supabase.from("receipt_audit_events").insert({
+    organization_id: user.organization.id,
+    receipt_id: receiptId,
+    actor_id: user.authUserId,
+    event_type: "image_replaced",
+    metadata: { previousPath: receipt.original_image_path, path: pendingPath, sha256 },
+  });
+  return { receiptId, path: pendingPath };
 }
 
 export async function signedReceiptImage(user: SessionUser, receiptId: string) {

@@ -87,17 +87,19 @@ export default async function DriverHomePage() {
             <Card>No receipts yet.</Card>
           ) : (
             receipts?.map((receipt) => (
-              <Card key={receipt.id} className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium">{receipt.merchant_name ?? "Draft"}</p>
-                  <p className="text-sm text-[#5E6B75]">
-                    {receipt.gallons ? `${receipt.gallons} gal` : "In progress"}
-                  </p>
-                </div>
-                <Badge tone={receipt.status === "verified" ? "success" : receipt.status === "rejected" ? "alert" : "amber"}>
-                  {receipt.status.replace("_", " ")}
-                </Badge>
-              </Card>
+              <Link key={receipt.id} href={`/driver/receipts/${receipt.id}`}>
+                <Card className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium">{receipt.merchant_name ?? "Draft"}</p>
+                    <p className="text-sm text-[#5E6B75]">
+                      {receipt.gallons ? `${receipt.gallons} gal` : "In progress"}
+                    </p>
+                  </div>
+                  <Badge tone={receipt.status === "verified" ? "success" : receipt.status === "rejected" ? "alert" : "amber"}>
+                    {receipt.status.replace("_", " ")}
+                  </Badge>
+                </Card>
+              </Link>
             ))
           )}
         </div>

@@ -39,12 +39,16 @@ export function ReceiptReviewForm({
   truckUnit,
   purchaserName,
   extraction,
+  status,
+  rejectionReason,
 }: {
   receiptId: string;
   truckId: string;
   truckUnit: string;
   purchaserName: string;
   extraction: NormalizedReceiptExtraction | null;
+  status?: string;
+  rejectionReason?: string | null;
 }) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
@@ -159,6 +163,11 @@ export function ReceiptReviewForm({
       ].join("|")}
     >
       <Card className="space-y-2">
+        {status === "rejected" ? (
+          <p className="rounded-md bg-[#C93C37]/10 p-3 text-sm font-semibold text-[#C93C37]">
+            Rejected — Action Required{rejectionReason ? `: ${rejectionReason}` : ""}
+          </p>
+        ) : null}
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={`/api/receipts/${receiptId}/image`}
@@ -255,7 +264,10 @@ export function ReceiptReviewForm({
         <Label htmlFor="purchaserName">Purchaser</Label>
         <Input id="purchaserName" name="purchaserName" defaultValue={purchaserName} required />
       </div>
-      <input type="hidden" name="fuelType" value={fields?.fuelType?.value ?? "diesel"} />
+      <div>
+        <Label htmlFor="fuelType">Fuel type</Label>
+        <Input id="fuelType" name="fuelType" defaultValue={fields?.fuelType?.value ?? "diesel"} />
+      </div>
       <div className="grid grid-cols-2 gap-3">
         <div>
           <Label htmlFor="gallons">Gallons</Label>
@@ -316,7 +328,7 @@ export function ReceiptReviewForm({
       <Textarea name="driverNote" placeholder="Note for managers (optional)" />
       <FieldError message={error ?? undefined} />
       <Button type="submit" variant="amber" size="lg" className="w-full" disabled={busy || ocrBusy}>
-        {ocrBusy ? "Reading receipt…" : "Submit receipt"}
+        {ocrBusy ? "Reading receipt…" : status === "rejected" ? "Resubmit receipt" : "Submit receipt"}
       </Button>
       <Badge tone="amber">OCR is an assistant. Confirm every value before submitting.</Badge>
     </form>

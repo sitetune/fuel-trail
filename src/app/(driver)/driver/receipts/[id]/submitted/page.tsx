@@ -23,6 +23,9 @@ export default async function SubmittedPage({ params }: { params: Promise<{ id: 
       </p>
       <p className="text-sm text-[#5E6B75]">Status: {receipt.status.replace("_", " ")}</p>
       <Button asChild variant="amber" className="w-full">
+        <Link href={`/driver/receipts/${id}`}>View receipt</Link>
+      </Button>
+      <Button asChild variant="outline" className="w-full">
         <Link href="/driver">Back home</Link>
       </Button>
     </Card>

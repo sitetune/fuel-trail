@@ -38,10 +38,12 @@ export const AUDIT_EVENT_TYPES = [
   "ocr_failed",
   "field_corrected",
   "submitted",
+  "resubmitted",
   "verified",
   "rejected",
   "duplicate_overridden",
   "archived",
+  "image_replaced",
 ] as const;
 export type AuditEventType = (typeof AUDIT_EVENT_TYPES)[number];
 

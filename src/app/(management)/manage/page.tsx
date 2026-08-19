@@ -77,9 +77,12 @@ export default async function ManageDashboardPage() {
         </p>
         <p className="mt-1 text-sm text-[#5E6B75]">{explanation.summary}</p>
       </Card>
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <Badge tone="alert">{needsReview} receipts needing review</Badge>
         <Badge tone="amber">{duplicates} suspected duplicates</Badge>
+        <Link className="text-sm font-medium underline" href="/manage/receipts">
+          Open Receipt Center
+        </Link>
       </div>
       <div className="grid gap-3 md:hidden">
         {(trucks ?? []).map((truck) => {

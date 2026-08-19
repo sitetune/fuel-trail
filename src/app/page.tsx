@@ -1,13 +1,49 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { RouteMark } from "@/components/brand/route-mark";
-import { BrandLockup } from "@/components/brand-lockup";
+import { ChartLineUp, FileText, PlayCircle, Truck } from "@phosphor-icons/react/ssr";
+import { HomeHeader } from "@/components/marketing/home-header";
+import { HeroScene } from "@/components/marketing/hero-scene";
 import { Button } from "@/components/ui/button";
 import { rethrowIfNextRedirect } from "@/lib/auth/redirect-error";
 import { AuthError, getSessionUser, redirectForUser } from "@/lib/auth/session";
-import { brand } from "@/config/brand";
 
 export const dynamic = "force-dynamic";
+
+const proofs = [
+  {
+    title: "Receipt capture",
+    body: "Digitize and verify fuel receipts in seconds.",
+    icon: FileText,
+  },
+  {
+    title: "Truck-level reports",
+    body: "See exactly what each truck spends, every day.",
+    icon: Truck,
+  },
+  {
+    title: "Fuel savings insights",
+    body: "Spot trends, reduce waste, and keep more in your pocket.",
+    icon: ChartLineUp,
+  },
+];
+
+const steps = [
+  {
+    n: "01",
+    title: "Photograph the receipt",
+    body: "Drivers capture the pump ticket before they roll. The original image stays on file.",
+  },
+  {
+    n: "02",
+    title: "Confirm the numbers",
+    body: "OCR suggests gallons, price, and station. A person confirms. The receipt is the record.",
+  },
+  {
+    n: "03",
+    title: "See spend by truck",
+    body: "Managers watch weekly fuel, estimated tank, and savings without chasing paperwork.",
+  },
+];
 
 export default async function HomePage() {
   let user = null;
@@ -19,54 +55,120 @@ export default async function HomePage() {
     if (error instanceof AuthError && error.code === "inactive") redirect("/login?error=inactive");
   }
   if (user) redirect(redirectForUser(user));
+
   return (
-    <div className="grid min-h-[100dvh] lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
-      <main id="main" className="flex flex-col justify-center px-6 py-16 sm:px-12 lg:px-16">
-        <BrandLockup />
-        <div className="mt-10 max-w-xl space-y-5">
-          <h1 className="font-display text-4xl font-semibold tracking-tight text-ink text-balance sm:text-5xl">
-            Smarter fuel decisions. <span className="text-route">Further.</span>
-          </h1>
-          <p className="max-w-[42ch] text-lg leading-relaxed text-muted">{brand.valueLine}</p>
-          <div className="flex flex-col gap-3 sm:flex-row">
-            <Button asChild size="lg" variant="primary" className="w-full sm:w-auto">
-              <Link href="/signup">Create a company</Link>
+    <div className="min-h-[100dvh] overflow-x-hidden bg-ink text-warm">
+      <HomeHeader />
+      <main id="main">
+        <section className="relative isolate flex min-h-[calc(100svh-4rem)] flex-col">
+          <HeroScene />
+          <div className="relative z-10 mx-auto flex w-full max-w-6xl flex-1 flex-col justify-center px-4 py-8 sm:px-6 lg:px-8">
+            <div className="max-w-xl lg:max-w-[34rem]">
+              <p className="text-[11px] font-semibold tracking-[0.18em] text-route uppercase">
+                Fuel receipts. Fleet intelligence.
+              </p>
+              <h1 className="mt-4 font-display text-4xl font-semibold leading-[1.05] tracking-tight text-balance sm:text-5xl lg:text-6xl xl:text-[4.35rem]">
+                Every gallon. Every truck. <span className="text-sky">Under control.</span>
+              </h1>
+              <p className="mt-5 max-w-[42ch] text-base leading-relaxed text-steel sm:text-lg">
+                Capture fuel receipts, track spending by truck, and find savings without chasing paperwork.
+              </p>
+              <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
+                <Button asChild size="lg" variant="primary" className="w-full sm:w-auto">
+                  <Link href="/signup">Start free</Link>
+                </Button>
+                <Button
+                  asChild
+                  size="lg"
+                  variant="outline"
+                  className="w-full border-white/25 bg-transparent text-warm hover:bg-white/10 sm:w-auto"
+                >
+                  <Link href="#how-it-works">
+                    <PlayCircle size={22} weight="regular" />
+                    See how it works
+                  </Link>
+                </Button>
+              </div>
+              <p className="mt-3 text-sm text-steel/80">No credit card required</p>
+            </div>
+          </div>
+
+          <section id="product" className="relative z-10 mx-auto w-full max-w-6xl shrink-0 px-4 pb-5 sm:px-6 lg:px-8 lg:pb-7">
+            <div className="grid gap-4 rounded-xl border border-white/10 bg-ink/90 px-4 py-4 shadow-[0_16px_40px_rgba(11,23,40,0.35)] backdrop-blur-md sm:grid-cols-3 sm:gap-0 sm:px-2 sm:py-5">
+              {proofs.map((item, index) => {
+                const Icon = item.icon;
+                return (
+                  <div
+                    key={item.title}
+                    className={
+                      index === 0
+                        ? "flex gap-3 px-3 sm:border-r sm:border-white/10"
+                        : index === 1
+                          ? "flex gap-3 px-3 sm:border-r sm:border-white/10"
+                          : "flex gap-3 px-3"
+                    }
+                  >
+                    <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-route/20 text-sky">
+                      <Icon size={20} weight="regular" />
+                    </span>
+                    <div>
+                      <p className="font-display text-sm font-semibold text-warm">{item.title}</p>
+                      <p className="mt-1 text-sm leading-relaxed text-steel">{item.body}</p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        </section>
+
+        <section id="how-it-works" className="border-t border-white/10 bg-ink">
+          <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 lg:px-8">
+            <p className="text-[11px] font-semibold tracking-[0.18em] text-route uppercase">How it works</p>
+            <h2 className="mt-2 font-display text-3xl font-semibold tracking-tight text-balance">
+              From pump to report in three steps
+            </h2>
+            <ol className="mt-10 grid gap-8 md:grid-cols-3">
+              {steps.map((step) => (
+                <li key={step.n}>
+                  <p className="font-display text-sm font-semibold text-sky">{step.n}</p>
+                  <h3 className="mt-2 font-display text-lg font-semibold text-warm">{step.title}</h3>
+                  <p className="mt-2 text-sm leading-relaxed text-steel">{step.body}</p>
+                </li>
+              ))}
+            </ol>
+          </div>
+        </section>
+
+        <section id="pricing" className="border-t border-white/10">
+          <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 lg:px-8">
+            <p className="text-[11px] font-semibold tracking-[0.18em] text-route uppercase">Pricing</p>
+            <h2 className="mt-2 font-display text-3xl font-semibold tracking-tight text-balance">
+              Start a company workspace free
+            </h2>
+            <p className="mt-3 max-w-[46ch] text-base leading-relaxed text-steel">
+              Create the account, add trucks, and invite drivers when you are ready. No card to begin.
+            </p>
+            <Button asChild size="lg" variant="primary" className="mt-6">
+              <Link href="/signup">Start free</Link>
             </Button>
-            <Button asChild size="lg" variant="outline" className="w-full sm:w-auto">
-              <Link href="/login">Sign in</Link>
-            </Button>
           </div>
-        </div>
-        <dl className="mt-14 grid max-w-xl gap-6 sm:grid-cols-2">
-          <div>
-            <dt className="font-display text-base font-semibold text-ink">For drivers</dt>
-            <dd className="mt-1 text-sm leading-relaxed text-muted">
-              Photograph the diesel receipt. Confirm the numbers. Keep driving.
-            </dd>
-          </div>
-          <div>
-            <dt className="font-display text-base font-semibold text-ink">For managers</dt>
-            <dd className="mt-1 text-sm leading-relaxed text-muted">
-              Truck-first spend, gallons, and estimated fuel with the original image on file.
-            </dd>
-          </div>
-        </dl>
+        </section>
       </main>
-      <aside className="relative hidden overflow-hidden bg-ink p-12 text-white lg:flex lg:flex-col lg:justify-between">
-        <RouteMark size={72} tone="dark" />
-        <div className="space-y-4">
-          <p className="font-display text-3xl font-semibold tracking-tight text-balance">
-            Every gallon. Every truck. One clear trail.
-          </p>
-          <div className="flex gap-1.5" aria-hidden="true">
-            <span className="h-1.5 w-10 rounded-full bg-route" />
-            <span className="h-1.5 w-10 rounded-full bg-route" />
-            <span className="h-1.5 w-10 rounded-full bg-route" />
-            <span className="h-1.5 w-10 rounded-full bg-steel/70" />
+
+      <footer id="resources" className="border-t border-white/10">
+        <div className="mx-auto flex max-w-6xl flex-col gap-4 px-4 py-10 sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8">
+          <p className="text-sm text-steel">Originals stay private. OCR is an assistant, not the record.</p>
+          <div className="flex gap-5 text-sm">
+            <Link href="/login" className="font-medium text-warm/90 hover:text-white">
+              Sign in
+            </Link>
+            <Link href="/signup" className="font-medium text-route hover:text-sky">
+              Start free
+            </Link>
           </div>
         </div>
-        <p className="text-sm text-steel">Originals stay private. OCR is an assistant, not the record.</p>
-      </aside>
+      </footer>
     </div>
   );
 }

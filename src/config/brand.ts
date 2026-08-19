@@ -6,6 +6,7 @@ export const brand = {
     navy: "#0B1728",
     ink: "#0B1728",
     route: "#176BFF",
+    sky: "#66B7FF",
     steel: "#AAB5C4",
     muted: "#4E5C6B",
     warm: "#F6F5F1",

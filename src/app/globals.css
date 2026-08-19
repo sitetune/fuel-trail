@@ -6,6 +6,7 @@
   --ink: #0b1728;
   --route: #176bff;
   --route-hover: #0e56d9;
+  --sky: #66b7ff;
   --warm: #f6f5f1;
   --steel: #aab5c4;
   --muted: #4e5c6b;
@@ -21,6 +22,7 @@
   --color-ink: var(--ink);
   --color-route: var(--route);
   --color-route-hover: var(--route-hover);
+  --color-sky: var(--sky);
   --color-warm: var(--warm);
   --color-steel: var(--steel);
   --color-muted: var(--muted);

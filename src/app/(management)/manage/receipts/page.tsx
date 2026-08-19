@@ -37,7 +37,7 @@ export default async function ReceiptCenterPage({
   let query = supabase
     .from("fuel_receipts")
     .select(
-      "id, status, purchased_at, submitted_at, merchant_name, merchant_city, merchant_region, gallons, price_per_gallon, total_amount, ocr_confidence, verified_at, rejected_at, last_reported_at, receipt_number, trucks(unit_number), profiles:driver_id(full_name), reviewer:profiles!verified_by(full_name), rejector:profiles!rejected_by(full_name)",
+      "id, status, purchased_at, submitted_at, merchant_name, merchant_city, merchant_region, gallons, price_per_gallon, total_amount, ocr_confidence, verified_at, rejected_at, last_reported_at, amended_at, receipt_number, trucks(unit_number), profiles:driver_id(full_name), reviewer:profiles!verified_by(full_name), rejector:profiles!rejected_by(full_name)",
       { count: "exact" },
     );
   if (filters.status) query = query.eq("status", filters.status);
@@ -237,7 +237,10 @@ export default async function ReceiptCenterPage({
                       ? `${formatReceiptDate(receipt.verified_at)} · ${(receipt.reviewer as { full_name?: string } | null)?.full_name ?? "Manager"}`
                       : "—"}
                 </td>
-                <td className="py-2">{receipt.last_reported_at ? "Included" : "Unreported"}</td>
+                <td className="py-2">
+                  {receipt.last_reported_at ? "Included" : "Unreported"}
+                  {receipt.amended_at ? " · Amended" : ""}
+                </td>
               </tr>
             ))}
           </tbody>

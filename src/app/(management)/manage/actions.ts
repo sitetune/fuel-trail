@@ -13,6 +13,12 @@ export async function upsertTruckAction(formData: FormData) {
     unit_number: String(formData.get("unit_number")),
     vin: String(formData.get("vin") || "") || null,
     license_plate: String(formData.get("license_plate") || "") || null,
+    license_state: String(formData.get("license_state") || "") || null,
+    year: formData.get("year") ? Number(formData.get("year")) : null,
+    make: String(formData.get("make") || "") || null,
+    model: String(formData.get("model") || "") || null,
+    fuel_type: String(formData.get("fuel_type") || "diesel"),
+    notes: String(formData.get("notes") || "") || null,
     tank_capacity_gallons: Number(formData.get("tank_capacity_gallons")),
     target_mpg: Number(formData.get("target_mpg")),
     week_start_min_gallons: Number(formData.get("week_start_min_gallons")),
@@ -55,7 +61,15 @@ export async function assignDriverAction(formData: FormData) {
     driver_id: driverId,
     created_by: user.authUserId,
   });
-  redirect(`/manage/trucks/${truckId}`);
+  await supabase.from("app_audit_events").insert({
+    organization_id: user.organization.id,
+    actor_id: user.authUserId,
+    entity_type: "assignment",
+    entity_id: driverId,
+    event_type: "assignment_changed",
+    metadata: { truckId, driverId },
+  });
+  redirect(String(formData.get("redirect") || `/manage/trucks/${truckId}`));
 }
 
 export async function setBaselineAction(formData: FormData) {
@@ -115,6 +129,12 @@ export async function updateOrgSettingsAction(formData: FormData) {
       default_driver_time_value_hourly: formData.get("default_driver_time_value_hourly")
         ? Number(formData.get("default_driver_time_value_hourly"))
         : null,
+      comparison_radius_miles: Number(formData.get("comparison_radius_miles") || 15),
+      price_freshness_hours: Number(formData.get("price_freshness_hours") || 72),
+      default_fuel_type: String(formData.get("default_fuel_type") || "diesel"),
+      address: String(formData.get("address") || "") || null,
+      primary_contact_name: String(formData.get("primary_contact_name") || "") || null,
+      primary_contact_email: String(formData.get("primary_contact_email") || "") || null,
       retention_years: retention,
     })
     .eq("id", user.organization.id);
@@ -122,7 +142,7 @@ export async function updateOrgSettingsAction(formData: FormData) {
 }
 
 export async function toggleUserActiveAction(formData: FormData) {
-  await requireOwner();
+  const user = await requireOwner();
   const supabase = await createServerSupabaseClient();
   const id = String(formData.get("id"));
   const next = String(formData.get("is_active")) === "true";
@@ -138,5 +158,50 @@ export async function toggleUserActiveAction(formData: FormData) {
     }
   }
   await supabase.from("profiles").update({ is_active: next }).eq("id", id);
+  await supabase.from("app_audit_events").insert({
+    organization_id: user.organization.id,
+    actor_id: user.authUserId,
+    entity_type: "profile",
+    entity_id: id,
+    event_type: next ? "user_activated" : "user_deactivated",
+  });
+  redirect("/manage/users");
+}
+
+export async function updateUserAction(formData: FormData) {
+  const user = await requireOwner();
+  const supabase = await createServerSupabaseClient();
+  const id = String(formData.get("id"));
+  const role = String(formData.get("role"));
+  if (role !== "owner_admin") {
+    const { data: target } = await supabase.from("profiles").select("role").eq("id", id).single();
+    if (target?.role === "owner_admin") {
+      const { count } = await supabase
+        .from("profiles")
+        .select("*", { count: "exact", head: true })
+        .eq("role", "owner_admin")
+        .eq("is_active", true)
+        .neq("id", id);
+      if ((count ?? 0) === 0) {
+        redirect("/manage/users?error=last-owner");
+      }
+    }
+  }
+  await supabase
+    .from("profiles")
+    .update({
+      full_name: String(formData.get("full_name")),
+      phone: String(formData.get("phone") || "") || null,
+      role,
+    })
+    .eq("id", id);
+  await supabase.from("app_audit_events").insert({
+    organization_id: user.organization.id,
+    actor_id: user.authUserId,
+    entity_type: "profile",
+    entity_id: id,
+    event_type: "user_updated",
+    metadata: { role },
+  });
   redirect("/manage/users");
 }

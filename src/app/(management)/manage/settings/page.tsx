@@ -35,6 +35,18 @@ export default async function SettingsPage({
         <Input name="default_reserve_gallons" type="number" defaultValue={org.default_reserve_gallons} />
         <Input name="default_cost_per_mile" type="number" step="0.01" defaultValue={org.default_cost_per_mile ?? ""} placeholder="Cost per mile" />
         <Input name="default_driver_time_value_hourly" type="number" step="0.01" defaultValue={org.default_driver_time_value_hourly ?? ""} placeholder="Driver time $/hr" />
+        <Label htmlFor="comparison_radius_miles">Savings comparison radius (miles)</Label>
+        <Input id="comparison_radius_miles" name="comparison_radius_miles" type="number" step="0.1" defaultValue={org.comparison_radius_miles} />
+        <Label htmlFor="price_freshness_hours">Price freshness (hours)</Label>
+        <Input id="price_freshness_hours" name="price_freshness_hours" type="number" defaultValue={org.price_freshness_hours} />
+        <Label htmlFor="default_fuel_type">Default fuel type</Label>
+        <Input id="default_fuel_type" name="default_fuel_type" defaultValue={org.default_fuel_type ?? "diesel"} />
+        <Label htmlFor="address">Company address</Label>
+        <Input id="address" name="address" defaultValue={org.address ?? ""} />
+        <Label htmlFor="primary_contact_name">Primary contact</Label>
+        <Input id="primary_contact_name" name="primary_contact_name" defaultValue={org.primary_contact_name ?? ""} />
+        <Label htmlFor="primary_contact_email">Primary contact email</Label>
+        <Input id="primary_contact_email" name="primary_contact_email" type="email" defaultValue={org.primary_contact_email ?? ""} />
         <Label htmlFor="retention_years">Retention years (minimum 4)</Label>
         <Input id="retention_years" name="retention_years" type="number" min={4} defaultValue={org.retention_years} />
         <Button type="submit" variant="amber">

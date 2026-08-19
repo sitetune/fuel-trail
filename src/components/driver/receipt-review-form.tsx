@@ -78,7 +78,7 @@ export function ReceiptReviewForm({
           if (!extractionNeedsSecondPass(firstExtracted)) return;
         }
         setOcrStatus("Trying a second pass on this photo…");
-        const image = await fetch(`/api/receipts/${receiptId}/image`);
+        const image = await fetch(`/api/receipts/${receiptId}/image?original=1`);
         if (!image.ok) throw new Error("image");
         const blob = await image.blob();
         const rawText = await recognizeReceiptText(blob);

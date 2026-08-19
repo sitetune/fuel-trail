@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { signOutAction } from "@/app/(auth)/actions";
 import { requireSession } from "@/lib/auth/session";
 import { SignOutButton } from "@/components/sign-out-button";
+import { NotificationBell } from "@/components/notifications/notification-bell";
 
 export const dynamic = "force-dynamic";
 
@@ -37,6 +38,7 @@ export default async function DriverLayout({ children }: { children: ReactNode }
           <Link href="/driver/queue" className="shrink-0">
             Queue
           </Link>
+          <NotificationBell user={user} href="/driver/notifications" />
         </nav>
         <SignOutButton />
       </header>

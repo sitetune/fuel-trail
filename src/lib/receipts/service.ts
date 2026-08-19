@@ -5,7 +5,9 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import type { ReceiptStatus, SessionUser } from "@/types/domain";
 import { getReceiptOcrProvider } from "@/lib/ocr";
-import { assertReceiptTransition, driverCanReplaceImage } from "./states";
+import { managementRecipientIds, notify } from "@/lib/notifications";
+import { ensureDisplayCopy } from "@/lib/receipts/display-image";
+import { assertReceiptTransition, driverCanReplaceImage, isLowOcrConfidence } from "./states";
 
 export function storageOriginalPath(input: {
   organizationId: string;
@@ -124,6 +126,22 @@ export async function completeUpload(user: SessionUser, receiptId: string, sha25
     event_type: "uploaded",
     metadata: { sha256, exactDuplicateOf: exactDup?.id ?? null },
   });
+  void ensureDisplayCopy({
+    receiptId,
+    organizationId: user.organization.id,
+    truckId: receipt.truck_id,
+    originalPath: receipt.original_image_path,
+  });
+  await notify({
+    organizationId: user.organization.id,
+    recipientIds: [user.authUserId],
+    eventType: "receipt_uploaded",
+    title: "Receipt uploaded",
+    body: "Your receipt photo was stored. Confirm the extracted details next.",
+    href: `/driver/receipts/${receiptId}`,
+    entityType: "fuel_receipt",
+    entityId: receiptId,
+  });
   return { exactDuplicateOf: exactDup?.id ?? null };
 }
 
@@ -184,6 +202,31 @@ export async function runOcr(
       event_type: "ocr_completed",
       metadata: { provider: publicExtracted.provider, warnings: publicExtracted.warnings },
     });
+    const managers = await managementRecipientIds(user.organization.id);
+    await notify({
+      organizationId: user.organization.id,
+      recipientIds: [user.authUserId],
+      eventType: "ocr_needs_review",
+      title: "Confirm this receipt",
+      body: publicExtracted.merchantName.value
+        ? `Review the details from ${publicExtracted.merchantName.value}.`
+        : "We could not fully read this receipt. Confirm the values from the photo.",
+      href: `/driver/receipts/${receiptId}`,
+      entityType: "fuel_receipt",
+      entityId: receiptId,
+    });
+    if (isLowOcrConfidence(publicExtracted.overallConfidence)) {
+      await notify({
+        organizationId: user.organization.id,
+        recipientIds: managers,
+        eventType: "ocr_low_confidence",
+        title: "Low-confidence OCR",
+        body: "A receipt needs review because OCR confidence is low.",
+        href: `/manage/receipts/${receiptId}`,
+        entityType: "fuel_receipt",
+        entityId: receiptId,
+      });
+    }
     return publicExtracted;
   } catch {
     await supabase.from("fuel_receipts").update({ status: "needs_review", ocr_provider: "manual" }).eq("id", receiptId);
@@ -192,6 +235,17 @@ export async function runOcr(
       receipt_id: receiptId,
       actor_id: user.authUserId,
       event_type: "ocr_failed",
+    });
+    const managers = await managementRecipientIds(user.organization.id);
+    await notify({
+      organizationId: user.organization.id,
+      recipientIds: [...managers, user.authUserId],
+      eventType: "ocr_low_confidence",
+      title: "Receipt needs manual review",
+      body: "Automatic reading failed. Confirm the values from the photo.",
+      href: user.profile.role === "driver" ? `/driver/receipts/${receiptId}` : `/manage/receipts/${receiptId}`,
+      entityType: "fuel_receipt",
+      entityId: receiptId,
     });
     if (options?.rawText) {
       const { parseFuelReceiptText } = await import("@/lib/ocr/parse-text");
@@ -211,16 +265,18 @@ function isoFromOcrDate(value: string | null) {
   return Number.isNaN(date.getTime()) ? null : date.toISOString();
 }
 
-export async function receiptImageBytes(user: SessionUser, receiptId: string) {
+export async function receiptImageBytes(user: SessionUser, receiptId: string, options?: { original?: boolean }) {
   const supabase = await createServerSupabaseClient();
   const { data: receipt } = await supabase
     .from("fuel_receipts")
-    .select("original_image_path")
+    .select("original_image_path, display_image_path")
     .eq("id", receiptId)
     .single();
   if (!receipt?.original_image_path) throw new Error("Receipt not found.");
+  const path =
+    !options?.original && receipt.display_image_path ? receipt.display_image_path : receipt.original_image_path;
   const admin = createServiceRoleClient();
-  const { data, error } = await admin.storage.from("fuel-receipts").download(receipt.original_image_path);
+  const { data, error } = await admin.storage.from("fuel-receipts").download(path);
   if (error || !data) throw new Error("Could not read stored receipt.");
   return { bytes: new Uint8Array(await data.arrayBuffer()), mimeType: data.type || "image/jpeg" };
 }
@@ -350,6 +406,30 @@ export async function submitReceipt(user: SessionUser, receiptId: string, payloa
     calculation_json: { ...estimate.calculation, reasons: estimate.reasons },
   });
 
+  const managers = await managementRecipientIds(user.organization.id);
+  await notify({
+    organizationId: user.organization.id,
+    recipientIds: managers,
+    eventType: resubmitting ? "receipt_resubmitted" : "receipt_submitted",
+    title: resubmitting ? "Rejected receipt resubmitted" : "New receipt submitted",
+    body: `${parsed.merchantName} · ${parsed.gallons} gal`,
+    href: `/manage/receipts/${receiptId}`,
+    entityType: "fuel_receipt",
+    entityId: receiptId,
+  });
+  if (likelyDup) {
+    await notify({
+      organizationId: user.organization.id,
+      recipientIds: managers,
+      eventType: "possible_duplicate",
+      title: "Possible duplicate receipt",
+      body: `${parsed.merchantName} may already have a matching receipt.`,
+      href: `/manage/receipts/${receiptId}`,
+      entityType: "fuel_receipt",
+      entityId: receiptId,
+    });
+  }
+
   return {
     status: nextStatus,
     warnings,
@@ -360,7 +440,7 @@ export async function submitReceipt(user: SessionUser, receiptId: string, payloa
 }
 
 export const verifySchema = z.object({
-  action: z.enum(["verify", "reject", "override_duplicate", "archive"]),
+  action: z.enum(["verify", "reject", "override_duplicate", "archive", "amend"]),
   reason: z.string().optional(),
   managerNote: z.string().optional(),
   corrections: z
@@ -439,6 +519,19 @@ export async function manageReceipt(user: SessionUser, receiptId: string, payloa
     nextStatus = "archived";
     updates.status = "archived";
   }
+  if (payload.action === "amend") {
+    nextStatus = "verified";
+    updates.status = "verified";
+    updates.amended_at = new Date().toISOString();
+  }
+  if (
+    currentStatus === "verified" &&
+    receipt.last_reported_at &&
+    payload.action !== "archive" &&
+    Object.keys(fieldChanges).length > 0
+  ) {
+    updates.amended_at = new Date().toISOString();
+  }
   assertReceiptTransition(currentStatus, nextStatus);
   const { error: updateError } = await supabase.from("fuel_receipts").update(updates).eq("id", receiptId);
   throwIfError(updateError, "Could not update receipt status.");
@@ -453,11 +546,37 @@ export async function manageReceipt(user: SessionUser, receiptId: string, payloa
           ? "rejected"
           : payload.action === "override_duplicate"
             ? "duplicate_overridden"
-            : "archived",
+            : payload.action === "amend"
+              ? "field_corrected"
+              : "archived",
     field_changes: Object.keys(fieldChanges).length ? fieldChanges : { status: { before: currentStatus, after: nextStatus } },
     metadata: { reason: payload.reason ?? null, from: currentStatus, to: nextStatus },
   });
   throwIfError(auditError, "Receipt was updated but the audit event could not be recorded.");
+  if (payload.action === "verify" || payload.action === "override_duplicate") {
+    await notify({
+      organizationId: user.organization.id,
+      recipientIds: [receipt.driver_id],
+      eventType: "receipt_verified",
+      title: "Receipt verified",
+      body: "A manager accepted this fuel receipt.",
+      href: `/driver/receipts/${receiptId}`,
+      entityType: "fuel_receipt",
+      entityId: receiptId,
+    });
+  }
+  if (payload.action === "reject") {
+    await notify({
+      organizationId: user.organization.id,
+      recipientIds: [receipt.driver_id],
+      eventType: "receipt_rejected",
+      title: "Receipt rejected — action required",
+      body: payload.reason?.trim() || "A manager asked you to correct this receipt.",
+      href: `/driver/receipts/${receiptId}`,
+      entityType: "fuel_receipt",
+      entityId: receiptId,
+    });
+  }
   return { ok: true, status: nextStatus };
 }
 
@@ -515,10 +634,27 @@ export async function completeImageReplace(user: SessionUser, receiptId: string,
     event_type: "image_replaced",
     metadata: { previousPath: receipt.original_image_path, path: pendingPath, sha256 },
   });
+  void ensureDisplayCopy({
+    receiptId,
+    organizationId: user.organization.id,
+    truckId: receipt.truck_id,
+    originalPath: pendingPath,
+  });
+  const managers = await managementRecipientIds(user.organization.id);
+  await notify({
+    organizationId: user.organization.id,
+    recipientIds: managers,
+    eventType: "receipt_image_replaced",
+    title: "Receipt image replaced",
+    body: "A driver uploaded a replacement photo for review.",
+    href: `/manage/receipts/${receiptId}`,
+    entityType: "fuel_receipt",
+    entityId: receiptId,
+  });
   return { receiptId, path: pendingPath };
 }
 
-export async function signedReceiptImage(user: SessionUser, receiptId: string) {
+export async function signedReceiptImage(user: SessionUser, receiptId: string, options?: { original?: boolean }) {
   const supabase = await createServerSupabaseClient();
   const { data: receipt } = await supabase
     .from("fuel_receipts")
@@ -526,10 +662,10 @@ export async function signedReceiptImage(user: SessionUser, receiptId: string) {
     .eq("id", receiptId)
     .single();
   if (!receipt?.original_image_path) throw new Error("Receipt not found.");
+  const path =
+    !options?.original && receipt.display_image_path ? receipt.display_image_path : receipt.original_image_path;
   const admin = createServiceRoleClient();
-  const { data, error } = await admin.storage
-    .from("fuel-receipts")
-    .createSignedUrl(receipt.original_image_path, 60);
+  const { data, error } = await admin.storage.from("fuel-receipts").createSignedUrl(path, 60);
   if (error || !data) throw new Error("Could not sign image URL.");
   return { url: data.signedUrl, expiresIn: 60 };
 }

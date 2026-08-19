@@ -5,6 +5,7 @@ import { BrandLockup } from "@/components/brand-lockup";
 import { OfflineBadge } from "@/components/offline-badge";
 import { ServiceWorkerRegister } from "@/components/service-worker-register";
 import { SignOutButton } from "@/components/sign-out-button";
+import { NotificationBell } from "@/components/notifications/notification-bell";
 import { requireManagement } from "@/lib/auth/session";
 
 const links = [
@@ -13,20 +14,24 @@ const links = [
   { href: "/manage/receipts", label: "Receipts" },
   { href: "/manage/reports", label: "Reports" },
   { href: "/manage/savings", label: "Savings" },
+  { href: "/manage/import", label: "Import" },
   { href: "/manage/routes", label: "Fuel stops" },
   { href: "/manage/stations", label: "Stations" },
   { href: "/manage/users", label: "Users" },
+  { href: "/manage/audit", label: "Audit" },
   { href: "/manage/settings", label: "Settings" },
 ];
 
 export const dynamic = "force-dynamic";
 
 export default async function ManageLayout({ children }: { children: ReactNode }) {
+  let user;
   try {
-    await requireManagement();
+    user = await requireManagement();
   } catch {
     redirect("/login");
   }
+  if (!user) redirect("/login");
   return (
     <div className="min-h-screen">
       <ServiceWorkerRegister />
@@ -34,7 +39,10 @@ export default async function ManageLayout({ children }: { children: ReactNode }
       <header className="border-b border-[#5E6B75]/20 bg-white">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3">
           <BrandLockup href="/manage" />
-          <SignOutButton />
+          <div className="flex items-center gap-2">
+            <NotificationBell user={user} href="/manage/notifications" />
+            <SignOutButton />
+          </div>
         </div>
         <nav className="mx-auto flex max-w-7xl gap-1 overflow-x-auto px-4 pb-2">
           {links.map((link) => (

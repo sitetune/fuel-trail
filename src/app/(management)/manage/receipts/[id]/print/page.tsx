@@ -52,7 +52,7 @@ export default async function ReceiptPrintPage({ params }: { params: Promise<{ i
         </p>
       </header>
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={`/api/receipts/${receipt.id}/image`} alt="Receipt" className="max-h-[480px] w-full object-contain" />
+      <img src={`/api/receipts/${receipt.id}/image?original=1`} alt="Receipt" className="max-h-[480px] w-full object-contain" />
       <table className="w-full text-left text-sm">
         <tbody>
           <tr><th className="py-1 pr-4">Status</th><td>{receiptStatusLabel(receipt.status)}</td></tr>

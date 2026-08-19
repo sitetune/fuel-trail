@@ -74,8 +74,12 @@ export function parseCsv(text: string): string[][] {
 
 export function csvEscape(value: string | number | null | undefined): string {
   if (value === null || value === undefined) return "";
-  const text = String(value);
-  if (/[",\n\r]/.test(text)) {
+  if (typeof value === "number") return Number.isFinite(value) ? String(value) : "";
+  let text = String(value);
+  if (/^[=+\-@\t\r]/.test(text)) {
+    text = `'${text}`;
+  }
+  if (/[",\n\r]/.test(text) || text.startsWith("'")) {
     return `"${text.replaceAll('"', '""')}"`;
   }
   return text;

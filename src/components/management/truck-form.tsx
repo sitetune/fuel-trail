@@ -13,6 +13,12 @@ export function TruckForm({
     unit_number: string;
     vin: string | null;
     license_plate: string | null;
+    license_state?: string | null;
+    year?: number | null;
+    make?: string | null;
+    model?: string | null;
+    fuel_type?: string | null;
+    notes?: string | null;
     tank_capacity_gallons: number;
     target_mpg: number;
     week_start_min_gallons: number;
@@ -30,6 +36,16 @@ export function TruckForm({
         <Input id="vin" name="vin" defaultValue={truck?.vin ?? ""} />
         <Label htmlFor="license_plate">License plate</Label>
         <Input id="license_plate" name="license_plate" defaultValue={truck?.license_plate ?? ""} />
+        <Label htmlFor="license_state">Plate state</Label>
+        <Input id="license_state" name="license_state" defaultValue={truck?.license_state ?? ""} maxLength={2} />
+        <Label htmlFor="year">Year</Label>
+        <Input id="year" name="year" type="number" defaultValue={truck?.year ?? ""} />
+        <Label htmlFor="make">Make</Label>
+        <Input id="make" name="make" defaultValue={truck?.make ?? ""} />
+        <Label htmlFor="model">Model</Label>
+        <Input id="model" name="model" defaultValue={truck?.model ?? ""} />
+        <Label htmlFor="fuel_type">Fuel type</Label>
+        <Input id="fuel_type" name="fuel_type" defaultValue={truck?.fuel_type ?? "diesel"} />
         <Label htmlFor="tank_capacity_gallons">Tank capacity (gal)</Label>
         <Input id="tank_capacity_gallons" name="tank_capacity_gallons" type="number" step="0.1" defaultValue={truck?.tank_capacity_gallons ?? 200} />
         <Label htmlFor="target_mpg">Target MPG</Label>
@@ -44,6 +60,8 @@ export function TruckForm({
           <option value="maintenance">maintenance</option>
           <option value="inactive">inactive</option>
         </select>
+        <Label htmlFor="notes">Notes</Label>
+        <Input id="notes" name="notes" defaultValue={truck?.notes ?? ""} />
         <Button type="submit" variant="amber" className="w-full">
           Save truck
         </Button>

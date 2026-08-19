@@ -1,61 +1,138 @@
 import { IFTA_LIMITATION_NOTE, groupIftaWorksheet } from "@/lib/reports/ifta";
+import { parseReportFilters, queryFuelReportRows } from "@/lib/reports/query";
 import { requireManagement } from "@/lib/auth/session";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input, Label } from "@/components/ui/input";
 import { weightedAveragePrice } from "@/lib/calculations";
 import { formatUsd } from "@/lib/utils";
+import Link from "next/link";
 
-export default async function ReportsPage() {
+export default async function ReportsPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const user = await requireManagement();
+  const raw = await searchParams;
+  const url = new URL("https://fueltrail.local/manage/reports");
+  for (const [key, value] of Object.entries(raw)) {
+    const text = Array.isArray(value) ? value[0] : value;
+    if (text) url.searchParams.set(key, text);
+  }
+  const filters = parseReportFilters(url);
+  const { receipts, rows } = await queryFuelReportRows(user, filters);
   const supabase = await createServerSupabaseClient();
-  const { data: receipts } = await supabase
-    .from("fuel_receipts")
-    .select("*, trucks(unit_number)")
-    .in("status", ["submitted", "verified"]);
-  const byTruck = new Map<string, { gallons: number; spend: number; count: number }>();
-  for (const row of receipts ?? []) {
-    const unit = (row.trucks as { unit_number: string }).unit_number;
-    const current = byTruck.get(unit) ?? { gallons: 0, spend: 0, count: 0 };
+  const [{ data: trucks }, { data: drivers }, { data: runs }] = await Promise.all([
+    supabase.from("trucks").select("id, unit_number").order("unit_number"),
+    supabase.from("profiles").select("id, full_name").eq("role", "driver").order("full_name"),
+    supabase.from("report_runs").select("id, report_type, receipt_count, created_at, filters").order("created_at", { ascending: false }).limit(10),
+  ]);
+  const byTruck = new Map<string, { gallons: number; spend: number; count: number; verified: number }>();
+  let amended = 0;
+  for (const row of receipts) {
+    const unit = (row.trucks as { unit_number: string } | null)?.unit_number ?? "Unknown";
+    const current = byTruck.get(unit) ?? { gallons: 0, spend: 0, count: 0, verified: 0 };
     current.gallons += Number(row.gallons ?? 0);
     current.spend += Number(row.total_amount ?? 0);
     current.count += 1;
+    if (row.status === "verified") current.verified += 1;
+    if (row.amended_at) amended += 1;
     byTruck.set(unit, current);
   }
-  const ifta = groupIftaWorksheet(
-    (receipts ?? []).map((row) => ({
-      organizationName: user.organization.name,
-      unitNumber: (row.trucks as { unit_number: string }).unit_number,
-      vin: null,
-      driverName: null,
-      purchaserName: row.purchaser_name,
-      purchasedAt: row.purchased_at ?? new Date().toISOString(),
-      merchantName: row.merchant_name ?? "",
-      merchantAddress: "",
-      jurisdiction: row.merchant_region ?? "",
-      gallons: Number(row.gallons ?? 0),
-      fuelType: row.fuel_type,
-      pricePerGallon: row.price_per_gallon === null ? null : Number(row.price_per_gallon),
-      total: Number(row.total_amount ?? 0),
-      receiptNumber: row.receipt_number,
-      verificationStatus: row.status,
-      receiptId: row.id,
-    })),
-  );
+  const ifta = groupIftaWorksheet(rows);
+  const query = url.searchParams.toString();
+  const csvHref = query ? `/api/reports/fuel.csv?${query}` : "/api/reports/fuel.csv";
+  const iftaHref = query ? `/api/reports/ifta-fuel.csv?${query}` : "/api/reports/ifta-fuel.csv";
+
   return (
     <div className="space-y-6">
       <h1 className="text-3xl font-semibold">Reports</h1>
+      <Card>
+        <form className="grid gap-3 md:grid-cols-4" method="get">
+          <div>
+            <Label htmlFor="from">From</Label>
+            <Input id="from" name="from" type="date" defaultValue={filters.from ?? ""} />
+          </div>
+          <div>
+            <Label htmlFor="to">To</Label>
+            <Input id="to" name="to" type="date" defaultValue={filters.to ?? ""} />
+          </div>
+          <div>
+            <Label htmlFor="truckId">Truck</Label>
+            <select id="truckId" name="truckId" className="h-11 w-full rounded-md border px-3" defaultValue={filters.truckId ?? ""}>
+              <option value="">All trucks</option>
+              {(trucks ?? []).map((truck) => (
+                <option key={truck.id} value={truck.id}>
+                  Unit {truck.unit_number}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <Label htmlFor="driverId">Driver</Label>
+            <select id="driverId" name="driverId" className="h-11 w-full rounded-md border px-3" defaultValue={filters.driverId ?? ""}>
+              <option value="">All drivers</option>
+              {(drivers ?? []).map((driver) => (
+                <option key={driver.id} value={driver.id}>
+                  {driver.full_name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <Label htmlFor="merchant">Merchant</Label>
+            <Input id="merchant" name="merchant" defaultValue={filters.merchant ?? ""} />
+          </div>
+          <div>
+            <Label htmlFor="jurisdiction">State</Label>
+            <Input id="jurisdiction" name="jurisdiction" defaultValue={filters.jurisdiction ?? ""} maxLength={2} />
+          </div>
+          <div>
+            <Label htmlFor="status">Status</Label>
+            <select id="status" name="status" className="h-11 w-full rounded-md border px-3" defaultValue={filters.status ?? ""}>
+              <option value="">Submitted + verified</option>
+              <option value="verified">verified</option>
+              <option value="submitted">submitted</option>
+            </select>
+          </div>
+          <div>
+            <Label htmlFor="report">Report membership</Label>
+            <select id="report" name="report" className="h-11 w-full rounded-md border px-3" defaultValue={filters.report ?? ""}>
+              <option value="">All</option>
+              <option value="unreported">Unreported</option>
+              <option value="reported">Already reported</option>
+            </select>
+          </div>
+          <div>
+            <Label htmlFor="fuelType">Fuel type</Label>
+            <Input id="fuelType" name="fuelType" defaultValue={filters.fuelType ?? ""} placeholder="diesel" />
+          </div>
+          <div className="flex items-end">
+            <Button type="submit">Apply filters</Button>
+          </div>
+        </form>
+      </Card>
       <div className="flex flex-wrap gap-3">
         <Button asChild variant="amber">
-          <a href="/api/reports/fuel.csv">Download truck fuel CSV</a>
+          <a href={csvHref}>Download truck fuel CSV</a>
         </Button>
         <Button asChild variant="outline">
-          <a href="/api/reports/ifta-fuel.csv">Download IFTA-ready fuel CSV</a>
+          <a href={iftaHref}>Download IFTA-ready fuel CSV</a>
+        </Button>
+        <Button asChild variant="ghost">
+          <Link href="/manage/reports">Clear filters</Link>
         </Button>
       </div>
+      {amended > 0 ? (
+        <p className="rounded bg-[#F5A524]/20 p-3 text-sm">
+          {amended} receipt{amended === 1 ? "" : "s"} in this view {amended === 1 ? "was" : "were"} amended after appearing in a report.
+        </p>
+      ) : null}
       <Card>
         <h2 className="font-semibold">Truck fuel report</h2>
-        <p className="mb-3 text-sm text-[#5E6B75]">Default grouping is by truck.</p>
+        <p className="mb-3 text-sm text-[#5E6B75]">CSV export snapshots the current filter so later edits do not silently rewrite history.</p>
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
             <thead>
@@ -65,7 +142,7 @@ export default async function ReportsPage() {
                 <th>Spend</th>
                 <th>Avg price</th>
                 <th>Receipts</th>
-                <th>Miles / MPG / $/mi</th>
+                <th>Verified</th>
               </tr>
             </thead>
             <tbody>
@@ -80,7 +157,7 @@ export default async function ReportsPage() {
                       : formatUsd(weightedAveragePrice({ spend: stats.spend, gallons: stats.gallons }) ?? 0)}
                   </td>
                   <td>{stats.count}</td>
-                  <td>Mileage unavailable</td>
+                  <td>{stats.verified}</td>
                 </tr>
               ))}
             </tbody>
@@ -118,6 +195,17 @@ export default async function ReportsPage() {
             </tbody>
           </table>
         </div>
+      </Card>
+      <Card>
+        <h2 className="font-semibold">Report history</h2>
+        <ul className="mt-2 space-y-2 text-sm">
+          {(runs ?? []).length === 0 ? <li>No CSV snapshots yet. Download a report to create one.</li> : null}
+          {(runs ?? []).map((run) => (
+            <li key={run.id}>
+              {run.report_type} · {run.receipt_count} receipts · {new Date(run.created_at).toLocaleString()}
+            </li>
+          ))}
+        </ul>
       </Card>
     </div>
   );

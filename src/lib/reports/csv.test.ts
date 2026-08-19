@@ -6,6 +6,12 @@ describe("csv", () => {
   it("escapes commas and quotes", () => {
     expect(csvEscape('Pilot, "the" stop')).toBe('"Pilot, ""the"" stop"');
   });
+  it("neutralizes spreadsheet formula injection", () => {
+    expect(csvEscape("=cmd")).toBe(`"'=cmd"`);
+    expect(csvEscape("+2+2")).toBe(`"'+2+2"`);
+    expect(csvEscape("-1+1")).toBe(`"'-1+1"`);
+    expect(csvEscape("@SUM(A1)")).toBe(`"'@SUM(A1)"`);
+  });
   it("opens with a BOM for Excel", () => {
     expect(toCsv(["a"], [["b"]]).startsWith("\uFEFF")).toBe(true);
   });

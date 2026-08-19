@@ -42,6 +42,8 @@ type Receipt = {
   ocr_extracted_json: { merchantName?: { value?: string | null; confidence?: number | null } } | null;
   duplicate_of: string | null;
   duplicate_override: boolean;
+  last_reported_at?: string | null;
+  amended_at?: string | null;
   trucks: { unit_number: string } | null;
   profiles: { full_name: string } | null;
 };
@@ -63,7 +65,7 @@ export function ReceiptWorkspace({
   const [busy, setBusy] = useState(false);
   const extracted = receipt.ocr_extracted_json;
 
-  async function act(action: "verify" | "reject" | "override_duplicate" | "archive", form: FormData) {
+  async function act(action: "verify" | "reject" | "override_duplicate" | "archive" | "amend", form: FormData) {
     setBusy(true);
     setError(null);
     const gallons = String(form.get("gallons") || "");
@@ -123,6 +125,9 @@ export function ReceiptWorkspace({
           <h1 className="text-2xl font-semibold">Unit {receipt.trucks?.unit_number}</h1>
           <ReceiptStatusBadge status={receipt.status} />
         </div>
+        {receipt.amended_at ? (
+          <p className="text-sm text-[#C93C37]">Amended after appearing in a report. Regenerate the report if needed.</p>
+        ) : null}
         {receipt.ocr_confidence != null ? (
           <p className="text-sm text-[#5E6B75]">{ocrConfidenceLabel(Number(receipt.ocr_confidence))}</p>
         ) : null}
@@ -134,7 +139,7 @@ export function ReceiptWorkspace({
         />
         <div className="flex flex-wrap gap-2">
           <Button asChild variant="outline">
-            <a href={`/api/receipts/${receipt.id}/image`} download>
+            <a href={`/api/receipts/${receipt.id}/image?original=1`} download>
               Download original
             </a>
           </Button>
@@ -275,6 +280,16 @@ export function ReceiptWorkspace({
             >
               Verify
             </Button>
+            {receipt.status === "verified" ? (
+              <Button
+                type="button"
+                variant="outline"
+                disabled={busy}
+                onClick={() => formRef.current && act("amend", new FormData(formRef.current))}
+              >
+                Save corrections
+              </Button>
+            ) : null}
             <Button
               type="button"
               variant="danger"

@@ -2,6 +2,7 @@ import { AuthError, requireManagement } from "@/lib/auth/session";
 import { apiError, apiOk } from "@/lib/api/http";
 import { validateFuelPriceCsv } from "@/lib/reports/csv";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { managementRecipientIds, notify } from "@/lib/notifications";
 
 export async function POST(request: Request) {
   try {
@@ -21,6 +22,7 @@ export async function POST(request: Request) {
         organization_id: user.organization.id,
         uploaded_by: user.authUserId,
         source_filename: file.name,
+        kind: "fuel_prices",
         status: commit ? "committed" : "validated",
         row_count: valid.length + errors.length,
         success_count: commit ? valid.length : 0,
@@ -63,6 +65,16 @@ export async function POST(request: Request) {
           });
         }
       }
+      await notify({
+        organizationId: user.organization.id,
+        recipientIds: await managementRecipientIds(user.organization.id),
+        eventType: "import_completed",
+        title: "Price import completed",
+        body: `Imported ${valid.length} station price row${valid.length === 1 ? "" : "s"}.`,
+        href: "/manage/savings",
+        entityType: "import_job",
+        entityId: job?.id,
+      });
     }
     return apiOk({ jobId: job?.id, validCount: valid.length, errors, preview: valid.slice(0, 25) });
   } catch (error) {

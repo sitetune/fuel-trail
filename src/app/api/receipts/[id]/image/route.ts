@@ -2,11 +2,12 @@ import { AuthError, requireSession } from "@/lib/auth/session";
 import { apiError } from "@/lib/api/http";
 import { receiptImageBytes } from "@/lib/receipts/service";
 
-export async function GET(_request: Request, context: { params: Promise<{ id: string }> }) {
+export async function GET(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
     const user = await requireSession();
     const { id } = await context.params;
-    const image = await receiptImageBytes(user, id);
+    const original = new URL(request.url).searchParams.get("original") === "1";
+    const image = await receiptImageBytes(user, id, { original });
     return new Response(image.bytes, {
       headers: {
         "Content-Type": image.mimeType,

@@ -12,6 +12,12 @@ export type Database = {
       profiles: { Row: Record<string, unknown>; Insert: Record<string, unknown>; Update: Record<string, unknown> };
       trucks: { Row: Record<string, unknown>; Insert: Record<string, unknown>; Update: Record<string, unknown> };
       fuel_receipts: { Row: Record<string, unknown>; Insert: Record<string, unknown>; Update: Record<string, unknown> };
+      notifications: { Row: Record<string, unknown>; Insert: Record<string, unknown>; Update: Record<string, unknown> };
+      notification_preferences: { Row: Record<string, unknown>; Insert: Record<string, unknown>; Update: Record<string, unknown> };
+      report_runs: { Row: Record<string, unknown>; Insert: Record<string, unknown>; Update: Record<string, unknown> };
+      report_run_receipts: { Row: Record<string, unknown>; Insert: Record<string, unknown>; Update: Record<string, unknown> };
+      import_jobs: { Row: Record<string, unknown>; Insert: Record<string, unknown>; Update: Record<string, unknown> };
+      app_audit_events: { Row: Record<string, unknown>; Insert: Record<string, unknown>; Update: Record<string, unknown> };
     };
     Views: {
       latest_fuel_estimates: { Row: Record<string, unknown> };

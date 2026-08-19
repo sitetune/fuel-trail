@@ -94,6 +94,10 @@ export type Organization = {
   price_freshness_hours: number;
   price_mismatch_tolerance: number;
   retention_years: number;
+  default_fuel_type?: string;
+  address?: string | null;
+  primary_contact_name?: string | null;
+  primary_contact_email?: string | null;
 };
 
 export type Truck = {
@@ -111,6 +115,8 @@ export type Truck = {
   week_start_min_gallons: number;
   reserve_gallons: number;
   status: TruckStatus;
+  fuel_type?: string;
+  notes?: string | null;
   baseline_fuel_gallons: number | null;
   baseline_odometer: number | null;
   baseline_recorded_at: string | null;

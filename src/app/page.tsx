@@ -3,6 +3,8 @@ import { redirect } from "next/navigation";
 import { ChartLineUp, FileText, PlayCircle, Truck } from "@phosphor-icons/react/ssr";
 import { HomeHeader } from "@/components/marketing/home-header";
 import { HeroScene } from "@/components/marketing/hero-scene";
+import { DriverScreens } from "@/components/marketing/driver-screens";
+import { PricingTable } from "@/components/marketing/pricing-table";
 import { Button } from "@/components/ui/button";
 import { rethrowIfNextRedirect } from "@/lib/auth/redirect-error";
 import { AuthError, getSessionUser, redirectForUser } from "@/lib/auth/session";
@@ -24,24 +26,6 @@ const proofs = [
     title: "Fuel savings insights",
     body: "Spot trends, reduce waste, and keep more in your pocket.",
     icon: ChartLineUp,
-  },
-];
-
-const steps = [
-  {
-    n: "01",
-    title: "Photograph the receipt",
-    body: "Drivers capture the pump ticket before they roll. The original image stays on file.",
-  },
-  {
-    n: "02",
-    title: "Confirm the numbers",
-    body: "OCR suggests gallons, price, and station. A person confirms. The receipt is the record.",
-  },
-  {
-    n: "03",
-    title: "See spend by truck",
-    body: "Managers watch weekly fuel, estimated tank, and savings without chasing paperwork.",
   },
 ];
 
@@ -75,7 +59,7 @@ export default async function HomePage() {
               </p>
               <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
                 <Button asChild size="lg" variant="primary" className="w-full sm:w-auto">
-                  <Link href="/signup">Start free</Link>
+                  <Link href="/signup">Get started</Link>
                 </Button>
                 <Button
                   asChild
@@ -89,7 +73,6 @@ export default async function HomePage() {
                   </Link>
                 </Button>
               </div>
-              <p className="mt-3 text-sm text-steel/80">No credit card required</p>
             </div>
           </div>
 
@@ -122,36 +105,11 @@ export default async function HomePage() {
           </section>
         </section>
 
-        <section id="how-it-works" className="border-t border-white/10 bg-ink">
-          <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 lg:px-8">
-            <p className="text-[11px] font-semibold tracking-[0.18em] text-route uppercase">How it works</p>
-            <h2 className="mt-2 font-display text-3xl font-semibold tracking-tight text-balance">
-              From pump to report in three steps
-            </h2>
-            <ol className="mt-10 grid gap-8 md:grid-cols-3">
-              {steps.map((step) => (
-                <li key={step.n}>
-                  <p className="font-display text-sm font-semibold text-sky">{step.n}</p>
-                  <h3 className="mt-2 font-display text-lg font-semibold text-warm">{step.title}</h3>
-                  <p className="mt-2 text-sm leading-relaxed text-steel">{step.body}</p>
-                </li>
-              ))}
-            </ol>
-          </div>
-        </section>
+        <DriverScreens />
 
         <section id="pricing" className="border-t border-white/10">
           <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 lg:px-8">
-            <p className="text-[11px] font-semibold tracking-[0.18em] text-route uppercase">Pricing</p>
-            <h2 className="mt-2 font-display text-3xl font-semibold tracking-tight text-balance">
-              Start a company workspace free
-            </h2>
-            <p className="mt-3 max-w-[46ch] text-base leading-relaxed text-steel">
-              Create the account, add trucks, and invite drivers when you are ready. No card to begin.
-            </p>
-            <Button asChild size="lg" variant="primary" className="mt-6">
-              <Link href="/signup">Start free</Link>
-            </Button>
+            <PricingTable />
           </div>
         </section>
       </main>
@@ -164,7 +122,7 @@ export default async function HomePage() {
               Sign in
             </Link>
             <Link href="/signup" className="font-medium text-route hover:text-sky">
-              Start free
+              Get started
             </Link>
           </div>
         </div>

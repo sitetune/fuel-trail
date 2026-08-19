@@ -3,9 +3,9 @@ import { expect, test } from "@playwright/test";
 test("marketing home, signup, and login are usable", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByRole("heading", { name: /Every gallon\. Every truck\./ })).toBeVisible();
-  const startFree = page.getByRole("link", { name: "Start free" }).first();
-  await expect(startFree).toBeVisible();
-  await expect(startFree).toBeInViewport();
+  await expect(page.getByRole("link", { name: "Get started" }).first()).toBeVisible();
+  const getStarted = page.getByRole("link", { name: "Get started" }).first();
+  await expect(getStarted).toBeInViewport();
   await page.getByRole("link", { name: "Sign in" }).first().click();
   await page.waitForURL("**/login");
   await expect(page.getByRole("heading", { name: "Sign in" })).toBeVisible();

@@ -16,11 +16,38 @@ const display = Sora({
   weight: ["500", "600", "700"],
 });
 
+const siteUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3021";
+
 export const metadata: Metadata = {
+  metadataBase: new URL(siteUrl),
   title: `${brand.name} · ${brand.tagline}`,
   description: `${brand.tagline} ${brand.valueLine}`,
   applicationName: brand.name,
   manifest: "/manifest.webmanifest",
+  icons: {
+    icon: [{ url: "/favicon.svg", type: "image/svg+xml" }, { url: "/icons/fuel-trail-logo.svg", type: "image/svg+xml" }],
+    apple: "/icons/icon.svg",
+  },
+  openGraph: {
+    type: "website",
+    siteName: brand.name,
+    title: `${brand.name} · Every gallon. Every truck. Under control.`,
+    description: brand.valueLine,
+    images: [
+      {
+        url: "/images/og-hero.jpg",
+        width: 1200,
+        height: 630,
+        alt: "Blue semi-truck fueling at night with FuelTrail receipt overlays",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: `${brand.name} · Every gallon. Every truck. Under control.`,
+    description: brand.valueLine,
+    images: ["/images/og-hero.jpg"],
+  },
   appleWebApp: {
     capable: true,
     title: brand.name,

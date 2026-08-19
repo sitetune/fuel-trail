@@ -34,7 +34,7 @@ export function HomeHeader() {
             Sign in
           </Link>
           <Button asChild variant="primary" className="h-10 min-h-10 px-3 sm:px-4">
-            <Link href="/signup">Start free</Link>
+            <Link href="/signup">Get started</Link>
           </Button>
         </div>
       </div>

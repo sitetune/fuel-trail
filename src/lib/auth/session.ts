@@ -1,11 +1,12 @@
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import type { Organization, Profile, SessionUser } from "@/types/domain";
 import { homePathForRole } from "@/lib/auth/roles";
+import { isPlatformAdminEmail, orgIsUsable } from "@/lib/orgs/status";
 
 export class AuthError extends Error {
   constructor(
     message: string,
-    public readonly code: "unauthenticated" | "inactive" | "forbidden" | "unconfigured",
+    public readonly code: "unauthenticated" | "inactive" | "forbidden" | "unconfigured" | "pending",
   ) {
     super(message);
   }
@@ -38,6 +39,15 @@ export async function getSessionUser(): Promise<SessionUser | null> {
     .eq("id", profile.organization_id)
     .single();
   if (!organization) return null;
+  const status = String(organization.status ?? "active");
+  if (!orgIsUsable(status) && !isPlatformAdminEmail(profile.email as string)) {
+    throw new AuthError(
+      status === "pending_activation"
+        ? "This company is waiting for FuelTrail activation."
+        : "This company has been deactivated.",
+      status === "pending_activation" ? "pending" : "inactive",
+    );
+  }
   await supabase
     .from("profiles")
     .update({ last_seen_at: new Date().toISOString() })
@@ -69,6 +79,14 @@ export async function requireOwner(): Promise<SessionUser> {
   const user = await requireSession();
   if (user.profile.role !== "owner_admin") {
     throw new AuthError("Owner access required.", "forbidden");
+  }
+  return user;
+}
+
+export async function requirePlatformAdmin(): Promise<SessionUser> {
+  const user = await requireSession();
+  if (!isPlatformAdminEmail(user.profile.email)) {
+    throw new AuthError("Platform admin access required.", "forbidden");
   }
   return user;
 }

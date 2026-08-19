@@ -6,7 +6,9 @@ import { OfflineBadge } from "@/components/offline-badge";
 import { ServiceWorkerRegister } from "@/components/service-worker-register";
 import { SignOutButton } from "@/components/sign-out-button";
 import { NotificationBell } from "@/components/notifications/notification-bell";
-import { requireManagement } from "@/lib/auth/session";
+import { AuthError, requireManagement } from "@/lib/auth/session";
+import { isPlatformAdminEmail } from "@/lib/orgs/status";
+import { notifyAgingReceipts } from "@/lib/notifications";
 
 const links = [
   { href: "/manage", label: "Fleet" },
@@ -15,6 +17,7 @@ const links = [
   { href: "/manage/reports", label: "Reports" },
   { href: "/manage/savings", label: "Savings" },
   { href: "/manage/import", label: "Import" },
+  { href: "/manage/setup", label: "Setup" },
   { href: "/manage/routes", label: "Fuel stops" },
   { href: "/manage/stations", label: "Stations" },
   { href: "/manage/users", label: "Users" },
@@ -28,10 +31,15 @@ export default async function ManageLayout({ children }: { children: ReactNode }
   let user;
   try {
     user = await requireManagement();
-  } catch {
+  } catch (error) {
+    if (error instanceof AuthError && error.code === "pending") redirect("/waiting");
     redirect("/login");
   }
   if (!user) redirect("/login");
+  void notifyAgingReceipts(user.organization.id);
+  const nav = isPlatformAdminEmail(user.profile.email)
+    ? [...links, { href: "/internal", label: "Admin" }]
+    : links;
   return (
     <div className="min-h-screen">
       <ServiceWorkerRegister />
@@ -45,7 +53,7 @@ export default async function ManageLayout({ children }: { children: ReactNode }
           </div>
         </div>
         <nav className="mx-auto flex max-w-7xl gap-1 overflow-x-auto px-4 pb-2">
-          {links.map((link) => (
+          {nav.map((link) => (
           <Link
             key={link.href}
             href={link.href}

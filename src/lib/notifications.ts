@@ -11,7 +11,8 @@ export type NotificationEvent =
   | "receipt_image_replaced"
   | "possible_duplicate"
   | "import_completed"
-  | "import_failed";
+  | "import_failed"
+  | "unreviewed_aging";
 
 type NotifyInput = {
   organizationId: string;
@@ -22,6 +23,7 @@ type NotifyInput = {
   href?: string;
   entityType?: string;
   entityId?: string;
+  idempotencyKey?: string;
 };
 
 export async function notify(input: NotifyInput) {
@@ -39,7 +41,7 @@ export async function notify(input: NotifyInput) {
       entity_type: input.entityType ?? null,
       entity_id: input.entityId ?? null,
       email_status: "skipped",
-      idempotency_key: `${input.eventType}:${input.entityId ?? "none"}:${recipientId}`,
+      idempotency_key: `${input.idempotencyKey ?? `${input.eventType}:${input.entityId ?? "none"}`}:${recipientId}`,
     }));
     const { error } = await admin.from("notifications").upsert(rows, {
       onConflict: "idempotency_key",
@@ -68,4 +70,36 @@ export async function managementRecipientIds(organizationId: string) {
     .eq("is_active", true)
     .in("role", ["owner_admin", "manager"]);
   return (data ?? []).map((row) => row.id);
+}
+
+export async function notifyAgingReceipts(organizationId: string) {
+  try {
+    const admin = createServiceRoleClient();
+    const cutoff = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString();
+    const { data: aging } = await admin
+      .from("fuel_receipts")
+      .select("id, merchant_name, submitted_at, created_at")
+      .eq("organization_id", organizationId)
+      .in("status", ["submitted", "needs_review"])
+      .lt("created_at", cutoff)
+      .limit(20);
+    if (!aging?.length) return;
+    const recipients = await managementRecipientIds(organizationId);
+    const week = new Date().toISOString().slice(0, 10);
+    for (const receipt of aging) {
+      await notify({
+        organizationId,
+        recipientIds: recipients,
+        eventType: "unreviewed_aging",
+        title: "Unreviewed receipt is aging",
+        body: `${receipt.merchant_name ?? "A receipt"} has waited more than 48 hours for review.`,
+        href: `/manage/receipts/${receipt.id}`,
+        entityType: "fuel_receipt",
+        entityId: receipt.id,
+        idempotencyKey: `unreviewed_aging:${receipt.id}:${week}`,
+      });
+    }
+  } catch {
+    // Layout rendering must not fail if aging alerts cannot be written.
+  }
 }

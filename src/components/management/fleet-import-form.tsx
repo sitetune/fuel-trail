@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { FLEET_IMPORT_KINDS, fleetTemplateCsv, type FleetImportKind } from "@/lib/imports/fleet";
+import { CsvTemplateDownloads } from "@/components/management/csv-template-downloads";
+import { FLEET_IMPORT_KINDS, type FleetImportKind } from "@/lib/imports/fleet";
 
 type PreviewRow = {
   rowNumber: number;
@@ -16,26 +17,17 @@ export function FleetImportForm() {
   const [kind, setKind] = useState<FleetImportKind>("trucks");
   const [message, setMessage] = useState("");
   const [preview, setPreview] = useState<PreviewRow[]>([]);
-  const template = fleetTemplateCsv(kind);
+  const [jobId, setJobId] = useState<string | null>(null);
 
   return (
-    <Card className="space-y-3">
-      <h2 className="font-semibold">Import Center</h2>
-      <p className="text-sm text-[#5E6B75]">
-        Preview and validate first. Driver imports do not send invitations unless you choose to.
-      </p>
-      <div className="flex flex-wrap gap-2">
-        {FLEET_IMPORT_KINDS.map((option) => (
-          <a
-            key={option}
-            className="inline-flex min-h-11 items-center underline"
-            href={`data:text/csv;charset=utf-8,${encodeURIComponent(fleetTemplateCsv(option))}`}
-            download={`fueltrail-${option}-template.csv`}
-          >
-            {option} template
-          </a>
-        ))}
+    <Card className="space-y-4">
+      <div>
+        <h2 className="font-semibold">Import fleet CSV</h2>
+        <p className="text-sm text-[#5E6B75]">
+          Download a template, fill your rows, then upload. Driver imports do not email invitations unless you check that box.
+        </p>
       </div>
+      <CsvTemplateDownloads kinds={["trucks", "drivers", "assignments"]} />
       <form
         className="space-y-3"
         onSubmit={async (event) => {
@@ -44,7 +36,10 @@ export function FleetImportForm() {
           const commit = (form.elements.namedItem("commit") as HTMLInputElement).checked;
           const data = new FormData(form);
           data.set("commit", commit ? "true" : "false");
-          data.set("sendInvites", (form.elements.namedItem("sendInvites") as HTMLInputElement).checked ? "true" : "false");
+          data.set(
+            "sendInvites",
+            (form.elements.namedItem("sendInvites") as HTMLInputElement | null)?.checked ? "true" : "false",
+          );
           const response = await fetch("/api/imports/fleet", { method: "POST", body: data });
           const json = await response.json();
           if (!response.ok) {
@@ -53,6 +48,7 @@ export function FleetImportForm() {
           }
           const errors = json.data.errors as Array<{ rowNumber: number; message: string }>;
           setPreview((json.data.preview ?? []) as PreviewRow[]);
+          setJobId(json.data.jobId ?? null);
           setMessage(
             `${commit ? "Committed" : "Validated"} ${json.data.validCount} rows. ${errors.length} row errors.${
               json.data.imported ? ` Imported ${json.data.imported}.` : ""
@@ -76,7 +72,10 @@ export function FleetImportForm() {
             </option>
           ))}
         </select>
-        <input name="file" type="file" accept=".csv,text/csv" required className="block" />
+        <label className="block text-sm font-medium" htmlFor="file">
+          CSV file
+        </label>
+        <input id="file" name="file" type="file" accept=".csv,text/csv" required className="block min-h-11" />
         <label className="block text-sm font-medium" htmlFor="duplicateMode">
           Existing rows
         </label>
@@ -94,9 +93,18 @@ export function FleetImportForm() {
             Send invitations after import
           </label>
         ) : null}
-        <Button type="submit">Preview / import</Button>
+        <Button type="submit" variant="amber">
+          Preview / import
+        </Button>
       </form>
       {message ? <p className="text-sm">{message}</p> : null}
+      {jobId ? (
+        <Button asChild variant="outline">
+          <a href={`/api/imports/jobs/${jobId}/errors.csv`} download={`fueltrail-import-${jobId}-errors.csv`}>
+            Download error file
+          </a>
+        </Button>
+      ) : null}
       {preview.length ? (
         <div className="overflow-x-auto text-sm">
           <table className="w-full text-left">
@@ -119,7 +127,6 @@ export function FleetImportForm() {
           </table>
         </div>
       ) : null}
-      <p className="sr-only">{template}</p>
     </Card>
   );
 }

@@ -98,6 +98,9 @@ export type Organization = {
   address?: string | null;
   primary_contact_name?: string | null;
   primary_contact_email?: string | null;
+  status?: string;
+  logo_path?: string | null;
+  onboarded_at?: string | null;
 };
 
 export type Truck = {

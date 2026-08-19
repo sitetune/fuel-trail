@@ -1,6 +1,9 @@
 import { UsersManager } from "@/components/management/users-manager";
+import { CsvTemplateDownloads } from "@/components/management/csv-template-downloads";
+import { Button } from "@/components/ui/button";
 import { requireManagement } from "@/lib/auth/session";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import Link from "next/link";
 
 export default async function UsersPage({
   searchParams,
@@ -32,7 +35,18 @@ export default async function UsersPage({
     ]),
   );
   return (
-    <UsersManager
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="text-3xl font-semibold">Users</h1>
+          <p className="text-sm text-[#5E6B75]">Invite one person, or import a driver CSV from Import Center.</p>
+        </div>
+        <Button asChild variant="outline">
+          <Link href="/manage/import">Import drivers CSV</Link>
+        </Button>
+      </div>
+      <CsvTemplateDownloads kinds={["drivers", "assignments"]} />
+      <UsersManager
       users={(users ?? []).map((person) => ({
         id: person.id,
         full_name: person.full_name,
@@ -49,5 +63,6 @@ export default async function UsersPage({
       canInvite={user.profile.role === "owner_admin"}
       error={params.error === "last-owner" ? "Cannot deactivate or demote the last active owner." : undefined}
     />
+    </div>
   );
 }

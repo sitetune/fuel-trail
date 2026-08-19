@@ -3,26 +3,17 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { FUEL_PRICE_CSV_HEADERS } from "@/lib/reports/csv";
-
-const template = `${FUEL_PRICE_CSV_HEADERS.join(",")}
-Pilot Travel Center,550 Interstate 10,Baytown,TX,77521,29.7355,-94.9774,3.459,diesel,2026-08-01T12:00:00Z,yes,yes,stay_attached,,
-Car-only station,100 Main St,Houston,TX,77002,29.7604,-95.3698,3.199,diesel,2026-08-01T12:00:00Z,no,no,unknown,,
-Drop-required yard,200 Industrial,Conroe,TX,77301,30.3119,-95.4561,3.399,diesel,2026-08-01T12:00:00Z,yes,yes,drop_required,Unverified lot,
-`;
 
 export function PriceImportForm() {
   const [message, setMessage] = useState("");
   return (
     <Card className="space-y-3">
-      <h2 className="font-semibold">Import station prices</h2>
-      <a
-        className="inline-flex min-h-11 items-center underline"
-        href={`data:text/csv;charset=utf-8,${encodeURIComponent(template)}`}
-        download="fueltrail-price-template.csv"
-      >
-        Download CSV template
-      </a>
+        <h2 className="font-semibold">Import station prices</h2>
+        <Button asChild variant="outline">
+          <a href="/api/imports/templates/fuel-prices" download="fueltrail-fuel-prices-template.csv">
+            Download station price CSV template
+          </a>
+        </Button>
       <form
         className="space-y-3"
         onSubmit={async (event) => {

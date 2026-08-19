@@ -53,6 +53,15 @@ export default async function ManageDashboardPage() {
   return (
     <div className="space-y-6">
       <h1 className="text-3xl font-semibold">Fleet</h1>
+      <p className="text-sm">
+        <Link className="font-medium underline" href="/manage/setup">
+          Launch checklist
+        </Link>
+        {" · "}
+        <Link className="font-medium underline" href="/manage/import">
+          Import CSV templates
+        </Link>
+      </p>
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <Card>
           <p className="text-sm text-[#5E6B75]">Active trucks</p>

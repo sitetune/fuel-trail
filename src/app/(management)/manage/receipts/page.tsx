@@ -16,6 +16,7 @@ import { formatPricePerGallon, formatReceiptDate, ocrConfidenceLabel } from "@/l
 import { isLowOcrConfidence, receiptStatusLabel } from "@/lib/receipts/states";
 import { formatGallons, formatUsd } from "@/lib/utils";
 import { RECEIPT_STATUSES } from "@/types/domain";
+import { ReceiptBatchBar } from "@/components/receipts/receipt-batch-bar";
 
 export default async function ReceiptCenterPage({
   searchParams,
@@ -149,6 +150,12 @@ export default async function ReceiptCenterPage({
           </div>
         </form>
       </Card>
+      <ReceiptBatchBar
+        receipts={(receipts ?? []).map((receipt) => ({
+          id: receipt.id,
+          label: `${(receipt.trucks as { unit_number?: string } | null)?.unit_number ?? "Unit"} · ${receipt.merchant_name ?? "Receipt"} · ${receipt.status}`,
+        }))}
+      />
       <div className="space-y-2 md:hidden">
         {(receipts ?? []).map((receipt) => (
           <Card key={receipt.id} className="flex gap-3">

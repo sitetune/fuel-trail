@@ -30,8 +30,23 @@ jobs:
           FUEL_ROUTE_PROVIDER: manual
 
   e2e:
-    if: false
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-      - run: echo "Enable this job after a seeded Supabase project exists. See docs/operations.md."
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.34.5
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm exec playwright test tests/e2e/public.spec.ts --project=desktop
+        env:
+          NEXT_PUBLIC_APP_URL: http://localhost:3021
+          NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
+          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: placeholder-publishable-key
+          RECEIPT_OCR_PROVIDER: manual
+          FUEL_ROUTE_PROVIDER: manual
+          CI: true

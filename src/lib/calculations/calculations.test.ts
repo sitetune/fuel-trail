@@ -10,7 +10,7 @@ import {
 } from "./fuel";
 import { effectiveStopCost, savingsVersusAlternative } from "./routing-cost";
 import { iftaQuarterRange, monthRangeInTimezone, isoDateInTimezone } from "./dates";
-import { duplicateReceiptSignature } from "./duplicates";
+import { duplicateReceiptSignature, sha256Hex } from "./duplicates";
 
 describe("weightedAveragePrice", () => {
   it("weights by gallons", () => {
@@ -172,5 +172,11 @@ describe("duplicate signature", () => {
     expect(duplicateReceiptSignature(base)).not.toBe(
       duplicateReceiptSignature({ ...base, gallons: 101 }),
     );
+  });
+});
+
+describe("sha256Hex", () => {
+  it("hashes on this thread in Node", async () => {
+    expect(await sha256Hex("abc")).toBe("ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad");
   });
 });

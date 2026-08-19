@@ -116,10 +116,19 @@ export default async function ReportsPage({
       </Card>
       <div className="flex flex-wrap gap-3">
         <Button asChild variant="amber">
-          <a href={csvHref}>Download truck fuel CSV</a>
+          <a href={csvHref} download="fueltrail-fuel-report.csv">
+            Download truck fuel CSV
+          </a>
         </Button>
         <Button asChild variant="outline">
-          <a href={iftaHref}>Download IFTA-ready fuel CSV</a>
+          <a href={iftaHref} download="fueltrail-ifta-fuel.csv">
+            Download IFTA-ready fuel CSV
+          </a>
+        </Button>
+        <Button asChild variant="outline">
+          <a href="/api/org/export.json" download="fueltrail-org-export.json">
+            Download organization data export
+          </a>
         </Button>
         <Button asChild variant="ghost">
           <Link href="/manage/reports">Clear filters</Link>

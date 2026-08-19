@@ -16,6 +16,8 @@ const serverSchema = publicSchema.extend({
   FUEL_ROUTE_PROVIDER: z.enum(["manual", "here"]).default("manual"),
   HERE_API_KEY: z.string().optional(),
   CRON_SECRET: z.string().optional(),
+  SIGNUP_AUTO_ACTIVATE: z.string().optional(),
+  PLATFORM_ADMIN_EMAILS: z.string().optional(),
 });
 
 export function getPublicEnv() {
@@ -42,6 +44,8 @@ export function getServerEnv() {
     FUEL_ROUTE_PROVIDER: process.env.FUEL_ROUTE_PROVIDER,
     HERE_API_KEY: process.env.HERE_API_KEY,
     CRON_SECRET: process.env.CRON_SECRET,
+    SIGNUP_AUTO_ACTIVATE: process.env.SIGNUP_AUTO_ACTIVATE,
+    PLATFORM_ADMIN_EMAILS: process.env.PLATFORM_ADMIN_EMAILS,
   });
 }
 

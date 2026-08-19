@@ -2,14 +2,19 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { BrandLockup } from "@/components/brand-lockup";
 import { Button } from "@/components/ui/button";
-import { getSessionUser, redirectForUser } from "@/lib/auth/session";
+import { AuthError, getSessionUser, redirectForUser } from "@/lib/auth/session";
 import { brand } from "@/config/brand";
 
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
-  const user = await getSessionUser();
-  if (user) redirect(redirectForUser(user));
+  try {
+    const user = await getSessionUser();
+    if (user) redirect(redirectForUser(user));
+  } catch (error) {
+    if (error instanceof AuthError && error.code === "pending") redirect("/waiting");
+    if (error instanceof AuthError && error.code === "inactive") redirect("/login?error=inactive");
+  }
   return (
     <main className="mx-auto flex min-h-screen max-w-3xl flex-col justify-center gap-8 px-6 py-16">
       <BrandLockup />
@@ -21,9 +26,14 @@ export default async function HomePage() {
           estimated fuel — with the original image kept for audit.
         </p>
       </div>
-      <Button asChild size="lg" variant="amber" className="w-full max-w-xs">
-        <Link href="/login">Sign in</Link>
-      </Button>
+      <div className="flex flex-col gap-3 sm:flex-row">
+        <Button asChild size="lg" variant="amber" className="w-full max-w-xs">
+          <Link href="/signup">Create a company</Link>
+        </Button>
+        <Button asChild size="lg" variant="outline" className="w-full max-w-xs">
+          <Link href="/login">Sign in</Link>
+        </Button>
+      </div>
     </main>
   );
 }

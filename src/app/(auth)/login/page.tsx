@@ -38,6 +38,9 @@ export default async function LoginPage({
             Sign in
           </Button>
         </form>
+        <Link className="text-sm font-medium underline" href="/signup">
+          Create a company account
+        </Link>
         <Link className="text-sm text-[#5E6B75] underline" href="/reset-password">
           Forgot password
         </Link>

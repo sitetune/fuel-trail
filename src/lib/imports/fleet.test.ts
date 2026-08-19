@@ -24,4 +24,14 @@ describe("fleet import", () => {
     });
     expect(result.rows[0].error).toBeTruthy();
   });
+
+  it("applies a saved column mapping from mismatched headers", () => {
+    const result = previewFleetCsv({
+      text: "Truck,Driver Email\n101,alex@example.com\n",
+      kind: "assignments",
+      mapping: { unit_number: "Truck", email: "Driver Email" },
+    });
+    expect(result.rows[0].error).toBeNull();
+    expect(result.rows[0].normalized).toMatchObject({ unit_number: "101", email: "alex@example.com" });
+  });
 });

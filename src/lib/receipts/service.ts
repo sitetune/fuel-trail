@@ -5,21 +5,15 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import type { ReceiptStatus, SessionUser } from "@/types/domain";
 import { getReceiptOcrProvider } from "@/lib/ocr";
+import { AuthError } from "@/lib/auth/errors";
+import { canVerifyReceipts } from "@/lib/auth/roles";
+import { assertOrgOwned, assertStoragePathForOrg, canViewReceipt } from "@/lib/auth/isolation";
 import { managementRecipientIds, notify } from "@/lib/notifications";
+import { storageOriginalPath } from "@/lib/receipts/paths";
 import { ensureDisplayCopy } from "@/lib/receipts/display-image";
 import { assertReceiptTransition, driverCanReplaceImage, isLowOcrConfidence } from "./states";
 
-export function storageOriginalPath(input: {
-  organizationId: string;
-  truckId: string;
-  receiptId: string;
-  purchasedAt: Date;
-  ext: string;
-}) {
-  const year = input.purchasedAt.getUTCFullYear();
-  const month = String(input.purchasedAt.getUTCMonth() + 1).padStart(2, "0");
-  return `${input.organizationId}/${input.truckId}/${year}/${month}/${input.receiptId}/original-${crypto.randomUUID()}.${input.ext}`;
-}
+export { storageOriginalPath } from "@/lib/receipts/paths";
 
 export async function getActiveAssignment(userId: string) {
   const supabase = await createServerSupabaseClient();
@@ -269,12 +263,25 @@ export async function receiptImageBytes(user: SessionUser, receiptId: string, op
   const supabase = await createServerSupabaseClient();
   const { data: receipt } = await supabase
     .from("fuel_receipts")
-    .select("original_image_path, display_image_path")
+    .select("original_image_path, display_image_path, organization_id, driver_id")
     .eq("id", receiptId)
+    .eq("organization_id", user.organization.id)
     .single();
   if (!receipt?.original_image_path) throw new Error("Receipt not found.");
+  assertOrgOwned(receipt, user.organization.id);
+  if (
+    !canViewReceipt({
+      role: user.profile.role,
+      userId: user.authUserId,
+      organizationId: user.organization.id,
+      receipt: { organization_id: receipt.organization_id as string, driver_id: receipt.driver_id as string },
+    })
+  ) {
+    throw new AuthError("Receipt not found.", "forbidden");
+  }
   const path =
     !options?.original && receipt.display_image_path ? receipt.display_image_path : receipt.original_image_path;
+  assertStoragePathForOrg(path, user.organization.id);
   const admin = createServiceRoleClient();
   const { data, error } = await admin.storage.from("fuel-receipts").download(path);
   if (error || !data) throw new Error("Could not read stored receipt.");
@@ -477,9 +484,18 @@ export const verifySchema = z.object({
 });
 
 export async function manageReceipt(user: SessionUser, receiptId: string, payload: z.infer<typeof verifySchema>) {
+  if (!canVerifyReceipts(user.profile.role)) {
+    throw new AuthError("This role is read-only.", "forbidden");
+  }
   const supabase = await createServerSupabaseClient();
-  const { data: receipt } = await supabase.from("fuel_receipts").select("*").eq("id", receiptId).single();
+  const { data: receipt } = await supabase
+    .from("fuel_receipts")
+    .select("*")
+    .eq("id", receiptId)
+    .eq("organization_id", user.organization.id)
+    .single();
   if (!receipt) throw new Error("Receipt not found.");
+  assertOrgOwned(receipt, user.organization.id);
   const currentStatus = receipt.status as ReceiptStatus;
   const updates: Record<string, unknown> = {};
   const fieldChanges: Record<string, { before: unknown; after: unknown }> = {};
@@ -658,12 +674,25 @@ export async function signedReceiptImage(user: SessionUser, receiptId: string, o
   const supabase = await createServerSupabaseClient();
   const { data: receipt } = await supabase
     .from("fuel_receipts")
-    .select("original_image_path, display_image_path")
+    .select("original_image_path, display_image_path, organization_id, driver_id")
     .eq("id", receiptId)
+    .eq("organization_id", user.organization.id)
     .single();
   if (!receipt?.original_image_path) throw new Error("Receipt not found.");
+  assertOrgOwned(receipt, user.organization.id);
+  if (
+    !canViewReceipt({
+      role: user.profile.role,
+      userId: user.authUserId,
+      organizationId: user.organization.id,
+      receipt: { organization_id: receipt.organization_id as string, driver_id: receipt.driver_id as string },
+    })
+  ) {
+    throw new AuthError("Receipt not found.", "forbidden");
+  }
   const path =
     !options?.original && receipt.display_image_path ? receipt.display_image_path : receipt.original_image_path;
+  assertStoragePathForOrg(path, user.organization.id);
   const admin = createServiceRoleClient();
   const { data, error } = await admin.storage.from("fuel-receipts").createSignedUrl(path, 60);
   if (error || !data) throw new Error("Could not sign image URL.");

@@ -53,11 +53,13 @@ export function ReceiptWorkspace({
   events,
   trucks,
   drivers,
+  readOnly = false,
 }: {
   receipt: Receipt;
   events: Array<{ id: string; event_type: string; created_at: string; field_changes: unknown; metadata: unknown }>;
   trucks: Array<{ id: string; unit_number: string }>;
   drivers: Array<{ id: string; full_name: string }>;
+  readOnly?: boolean;
 }) {
   const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
@@ -271,6 +273,9 @@ export function ReceiptWorkspace({
             <p className="sm:col-span-2 text-sm text-[#C93C37]">Possible duplicate of another receipt.</p>
           ) : null}
           <FieldError message={error ?? undefined} />
+          {readOnly ? (
+            <p className="sm:col-span-2 text-sm text-[#5E6B75]">Auditor view is read-only. Verification and corrections require a manager.</p>
+          ) : (
           <div className="flex flex-wrap gap-2 sm:col-span-2">
             <Button
               type="button"
@@ -315,6 +320,7 @@ export function ReceiptWorkspace({
               Archive
             </Button>
           </div>
+          )}
         </Card>
         <Card>
           <h2 className="font-semibold">Audit and status history</h2>

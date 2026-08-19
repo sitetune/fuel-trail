@@ -6,15 +6,21 @@ import { Badge, Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/input";
 import { assignDriverAction, setBaselineAction } from "../../actions";
+import { canMutateFleet } from "@/lib/auth/roles";
 import { requireManagement } from "@/lib/auth/session";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { formatUsd } from "@/lib/utils";
 
 export default async function TruckDetailPage({ params }: { params: Promise<{ truckId: string }> }) {
-  await requireManagement();
+  const user = await requireManagement();
   const { truckId } = await params;
   const supabase = await createServerSupabaseClient();
-  const { data: truck } = await supabase.from("trucks").select("*").eq("id", truckId).single();
+  const { data: truck } = await supabase
+    .from("trucks")
+    .select("*")
+    .eq("id", truckId)
+    .eq("organization_id", user.organization.id)
+    .single();
   if (!truck) notFound();
   const { data: estimate } = await supabase.from("latest_fuel_estimates").select("*").eq("truck_id", truckId).maybeSingle();
   const { data: assignment } = await supabase
@@ -61,6 +67,7 @@ export default async function TruckDetailPage({ params }: { params: Promise<{ tr
           <p className="mt-1">
             {(assignment?.profiles as { full_name?: string } | null)?.full_name ?? "Unassigned"}
           </p>
+          {canMutateFleet(user.profile.role) ? (
           <form action={assignDriverAction} className="mt-3 space-y-2">
             <input type="hidden" name="truckId" value={truck.id} />
             <Label htmlFor="driverId">Assign driver</Label>
@@ -73,6 +80,7 @@ export default async function TruckDetailPage({ params }: { params: Promise<{ tr
             </select>
             <Button type="submit">Save assignment</Button>
           </form>
+          ) : null}
         </Card>
       </div>
       <TruckCharts
@@ -96,6 +104,7 @@ export default async function TruckDetailPage({ params }: { params: Promise<{ tr
           ))}
         </ul>
       </Card>
+      {canMutateFleet(user.profile.role) ? (
       <Card>
         <h2 className="font-semibold">Baseline correction</h2>
         <form action={setBaselineAction} className="mt-3 grid gap-2 sm:grid-cols-2">
@@ -105,7 +114,8 @@ export default async function TruckDetailPage({ params }: { params: Promise<{ tr
           <Button type="submit">Save baseline</Button>
         </form>
       </Card>
-      <TruckForm truck={truck} />
+      ) : null}
+      {canMutateFleet(user.profile.role) ? <TruckForm truck={truck} /> : null}
       <Card>
         <h2 className="font-semibold">Assignment history</h2>
         <ul className="mt-2 text-sm">

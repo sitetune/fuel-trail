@@ -1,10 +1,11 @@
 import { notFound } from "next/navigation";
 import { ReceiptWorkspace } from "@/components/management/receipt-workspace";
+import { canVerifyReceipts } from "@/lib/auth/roles";
 import { requireManagement } from "@/lib/auth/session";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 export default async function ReceiptDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  await requireManagement();
+  const user = await requireManagement();
   const { id } = await params;
   const supabase = await createServerSupabaseClient();
   const { data: receipt } = await supabase
@@ -24,6 +25,7 @@ export default async function ReceiptDetailPage({ params }: { params: Promise<{ 
       events={events ?? []}
       trucks={trucks ?? []}
       drivers={drivers ?? []}
+      readOnly={!canVerifyReceipts(user.profile.role)}
     />
   );
 }

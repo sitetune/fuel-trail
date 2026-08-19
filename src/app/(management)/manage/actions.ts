@@ -2,10 +2,10 @@
 
 import { redirect } from "next/navigation";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
-import { requireManagement, requireOwner } from "@/lib/auth/session";
+import { requireOwner, requireWriteManagement } from "@/lib/auth/session";
 
 export async function upsertTruckAction(formData: FormData) {
-  const user = await requireManagement();
+  const user = await requireWriteManagement();
   const supabase = await createServerSupabaseClient();
   const id = String(formData.get("id") || "");
   const payload = {
@@ -41,7 +41,7 @@ export async function upsertTruckAction(formData: FormData) {
 }
 
 export async function assignDriverAction(formData: FormData) {
-  const user = await requireManagement();
+  const user = await requireWriteManagement();
   const supabase = await createServerSupabaseClient();
   const truckId = String(formData.get("truckId"));
   const driverId = String(formData.get("driverId"));
@@ -73,7 +73,7 @@ export async function assignDriverAction(formData: FormData) {
 }
 
 export async function setBaselineAction(formData: FormData) {
-  const user = await requireManagement();
+  const user = await requireWriteManagement();
   const supabase = await createServerSupabaseClient();
   const truckId = String(formData.get("truckId"));
   const gallons = Number(formData.get("baseline_fuel_gallons"));

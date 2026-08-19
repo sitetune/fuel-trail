@@ -8,7 +8,7 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 const bodySchema = z.object({
     email: z.email(),
   fullName: z.string().min(1),
-  role: z.enum(["owner_admin", "manager", "driver"]),
+  role: z.enum(["owner_admin", "manager", "auditor", "driver"]),
   truckId: z.string().uuid().optional(),
 });
 

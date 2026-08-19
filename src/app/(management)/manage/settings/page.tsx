@@ -53,6 +53,17 @@ export default async function SettingsPage({
           Save settings
         </Button>
       </form>
+      <form action="/api/org/logo" method="post" encType="multipart/form-data" className="space-y-3 border-t pt-3">
+        <Label htmlFor="logo">Company logo</Label>
+        {org.logo_path ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src="/api/org/logo" alt="Company logo" className="h-16 w-16 rounded-lg object-contain" />
+        ) : null}
+        <input id="logo" name="file" type="file" accept="image/png,image/jpeg,image/webp" required className="block min-h-11" />
+        <Button type="submit" variant="outline">
+          Upload logo
+        </Button>
+      </form>
     </Card>
   );
 }

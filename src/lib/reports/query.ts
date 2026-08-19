@@ -112,6 +112,7 @@ export async function snapshotReportRun(input: {
     await supabase
       .from("fuel_receipts")
       .update({ last_reported_at: new Date().toISOString() })
+      .eq("organization_id", input.user.organization.id)
       .in("id", ids)
       .is("last_reported_at", null);
   }

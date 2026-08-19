@@ -27,7 +27,7 @@ export default async function DriverLayout({ children }: { children: ReactNode }
       <ServiceWorkerRegister />
       <OfflineBadge />
       <header className="flex items-center justify-between gap-3 border-b border-[#5E6B75]/20 bg-white px-4 py-3">
-        <BrandLockup href="/driver" />
+        <BrandLockup href="/driver" logoUrl={user.organization.logo_path ? "/api/org/logo" : null} />
         <nav className="flex min-h-11 items-center gap-3 overflow-x-auto text-sm font-medium">
           <Link href="/driver" className="shrink-0">
             Home

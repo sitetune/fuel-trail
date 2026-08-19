@@ -1,10 +1,10 @@
-import { AuthError, requireManagement } from "@/lib/auth/session";
+import { AuthError, requireWriteManagement } from "@/lib/auth/session";
 import { apiError, apiOk } from "@/lib/api/http";
 import { manageReceipt, verifySchema } from "@/lib/receipts/service";
 
 export async function POST(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
-    const user = await requireManagement();
+    const user = await requireWriteManagement();
     const { id } = await context.params;
     const payload = verifySchema.parse(await request.json());
     const result = await manageReceipt(user, id, payload);

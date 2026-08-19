@@ -1,13 +1,14 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { canMutateFleet } from "@/lib/auth/roles";
 import { requireManagement } from "@/lib/auth/session";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { TruckForm } from "@/components/management/truck-form";
 import { CsvTemplateDownloads } from "@/components/management/csv-template-downloads";
 
 export default async function TrucksPage() {
-  await requireManagement();
+  const user = await requireManagement();
   const supabase = await createServerSupabaseClient();
   const { data: trucks } = await supabase.from("trucks").select("*").order("unit_number");
   return (
@@ -41,10 +42,12 @@ export default async function TrucksPage() {
           ))}
         </div>
       </div>
+      {canMutateFleet(user.profile.role) ? (
       <div>
         <h2 className="mb-4 text-xl font-semibold">Add truck</h2>
         <TruckForm />
       </div>
+      ) : null}
     </div>
   );
 }

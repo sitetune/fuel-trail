@@ -46,7 +46,7 @@ export default async function ManageLayout({ children }: { children: ReactNode }
       <OfflineBadge />
       <header className="border-b border-[#5E6B75]/20 bg-white">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3">
-          <BrandLockup href="/manage" />
+          <BrandLockup href="/manage" logoUrl={user.organization.logo_path ? "/api/org/logo" : null} />
           <div className="flex items-center gap-2">
             <NotificationBell user={user} href="/manage/notifications" />
             <SignOutButton />
@@ -63,6 +63,9 @@ export default async function ManageLayout({ children }: { children: ReactNode }
             </Link>
           ))}
         </nav>
+        {user.profile.role === "auditor" ? (
+          <p className="mx-auto max-w-7xl px-4 pb-2 text-sm text-[#5E6B75]">Read-only auditor access. You can review data but cannot change receipts, fleet, or settings.</p>
+        ) : null}
       </header>
       <main className="mx-auto max-w-7xl px-4 py-6">{children}</main>
     </div>

@@ -1,16 +1,10 @@
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import type { Organization, Profile, SessionUser } from "@/types/domain";
-import { homePathForRole } from "@/lib/auth/roles";
+import { homePathForRole, isManagementRole, canMutateFleet } from "@/lib/auth/roles";
+import { AuthError } from "@/lib/auth/errors";
 import { isPlatformAdminEmail, orgIsUsable } from "@/lib/orgs/status";
 
-export class AuthError extends Error {
-  constructor(
-    message: string,
-    public readonly code: "unauthenticated" | "inactive" | "forbidden" | "unconfigured" | "pending",
-  ) {
-    super(message);
-  }
-}
+export { AuthError } from "@/lib/auth/errors";
 
 export async function getSessionUser(): Promise<SessionUser | null> {
   let supabase;
@@ -69,8 +63,16 @@ export async function requireSession(): Promise<SessionUser> {
 
 export async function requireManagement(): Promise<SessionUser> {
   const user = await requireSession();
-  if (user.profile.role === "driver") {
+  if (!isManagementRole(user.profile.role)) {
     throw new AuthError("Management access required.", "forbidden");
+  }
+  return user;
+}
+
+export async function requireWriteManagement(): Promise<SessionUser> {
+  const user = await requireManagement();
+  if (!canMutateFleet(user.profile.role)) {
+    throw new AuthError("This role is read-only.", "forbidden");
   }
   return user;
 }

@@ -1,4 +1,4 @@
-export const ROLES = ["owner_admin", "manager", "driver"] as const;
+export const ROLES = ["owner_admin", "manager", "auditor", "driver"] as const;
 export type Role = (typeof ROLES)[number];
 
 export const TRUCK_STATUSES = ["active", "maintenance", "inactive"] as const;

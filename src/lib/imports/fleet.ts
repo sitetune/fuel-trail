@@ -64,6 +64,10 @@ export function autoMapHeaders(headers: string[], expected: readonly string[]) {
   return mapping;
 }
 
+export function fieldLabel(field: string) {
+  return field.replaceAll("_", " ");
+}
+
 export function headersForKind(kind: FleetImportKind) {
   if (kind === "trucks") return TRUCK_CSV_HEADERS;
   if (kind === "drivers") return DRIVER_CSV_HEADERS;

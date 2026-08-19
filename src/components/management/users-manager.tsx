@@ -23,11 +23,13 @@ export function UsersManager({
   users,
   trucks,
   canInvite,
+  canAssign,
   error,
 }: {
   users: ManagedUser[];
   trucks: Array<{ id: string; unit_number: string }>;
   canInvite: boolean;
+  canAssign?: boolean;
   error?: string;
 }) {
   const [message, setMessage] = useState(error ?? "");
@@ -52,6 +54,7 @@ export function UsersManager({
           <option value="all">All roles</option>
           <option value="owner_admin">owner</option>
           <option value="manager">manager</option>
+          <option value="auditor">auditor</option>
           <option value="driver">driver</option>
         </select>
         <select className="h-11 rounded-md border px-3" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
@@ -86,6 +89,7 @@ export function UsersManager({
                   <select name="role" className="h-11 rounded-md border px-3" defaultValue={person.role}>
                     <option value="driver">driver</option>
                     <option value="manager">manager</option>
+                    <option value="auditor">auditor</option>
                     <option value="owner_admin">owner_admin</option>
                   </select>
                   <Button type="submit" variant="outline" size="sm">
@@ -103,7 +107,7 @@ export function UsersManager({
                     </Button>
                   </form>
                 ) : null}
-                {person.role === "driver" ? (
+                {person.role === "driver" && (canAssign ?? canInvite) ? (
                   <form action={assignDriverAction} className="flex flex-wrap items-center gap-2">
                     <input type="hidden" name="driverId" value={person.id} />
                     <input type="hidden" name="redirect" value="/manage/users" />
@@ -176,6 +180,7 @@ export function UsersManager({
               <select id="role" name="role" className="h-11 w-full rounded-md border px-3">
                 <option value="driver">driver</option>
                 <option value="manager">manager</option>
+                <option value="auditor">auditor</option>
                 <option value="owner_admin">owner_admin</option>
               </select>
               <Label htmlFor="truckId">Assign truck (drivers)</Label>

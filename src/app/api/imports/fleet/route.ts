@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { canMutateFleet } from "@/lib/auth/roles";
 import { AuthError, requireManagement } from "@/lib/auth/session";
 import { apiError, apiOk } from "@/lib/api/http";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
@@ -22,6 +23,9 @@ export async function POST(request: Request) {
     const file = form.get("file");
     const kind = kindSchema.parse(String(form.get("kind") || "trucks"));
     const commit = form.get("commit") === "true";
+    if (commit && !canMutateFleet(user.profile.role)) {
+      throw new AuthError("This role is read-only.", "forbidden");
+    }
     const duplicateMode = String(form.get("duplicateMode") || "skip") === "update" ? "update" : "skip";
     const sendInvites = form.get("sendInvites") === "true";
     const mappingRaw = form.get("mapping");

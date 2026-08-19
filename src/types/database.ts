@@ -17,6 +17,7 @@ export type Database = {
       report_runs: { Row: Record<string, unknown>; Insert: Record<string, unknown>; Update: Record<string, unknown> };
       report_run_receipts: { Row: Record<string, unknown>; Insert: Record<string, unknown>; Update: Record<string, unknown> };
       import_jobs: { Row: Record<string, unknown>; Insert: Record<string, unknown>; Update: Record<string, unknown> };
+      import_column_mappings: { Row: Record<string, unknown>; Insert: Record<string, unknown>; Update: Record<string, unknown> };
       app_audit_events: { Row: Record<string, unknown>; Insert: Record<string, unknown>; Update: Record<string, unknown> };
     };
     Views: {
@@ -28,7 +29,7 @@ export type Database = {
     };
     Functions: Record<string, never>;
     Enums: {
-      app_role: "owner_admin" | "manager" | "driver";
+      app_role: "owner_admin" | "manager" | "auditor" | "driver";
     };
   };
 };

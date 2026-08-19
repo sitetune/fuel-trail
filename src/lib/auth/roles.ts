@@ -1,7 +1,7 @@
 import type { Role } from "@/types/domain";
 
 export function isManagementRole(role: Role): boolean {
-  return role === "owner_admin" || role === "manager";
+  return role === "owner_admin" || role === "manager" || role === "auditor";
 }
 
 export function isOwnerAdmin(role: Role): boolean {
@@ -17,11 +17,15 @@ export function canManageOrgSettings(role: Role): boolean {
 }
 
 export function canVerifyReceipts(role: Role): boolean {
-  return isManagementRole(role);
+  return role === "owner_admin" || role === "manager";
+}
+
+export function canMutateFleet(role: Role): boolean {
+  return role === "owner_admin" || role === "manager";
 }
 
 export function canCaptureReceipts(role: Role): boolean {
-  return role === "driver" || isManagementRole(role);
+  return role === "driver" || role === "owner_admin" || role === "manager";
 }
 
 export function homePathForRole(role: Role): string {

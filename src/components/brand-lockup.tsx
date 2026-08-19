@@ -26,10 +26,15 @@ export function BrandMark({ size = 32 }: { size?: number }) {
   );
 }
 
-export function BrandLockup({ href = "/" }: { href?: string }) {
+export function BrandLockup({ href = "/", logoUrl }: { href?: string; logoUrl?: string | null }) {
   return (
     <Link href={href} className="flex items-center gap-2 min-h-11">
-      <BrandMark />
+      {logoUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={logoUrl} alt="" width={32} height={32} className="h-8 w-8 rounded-lg object-contain" />
+      ) : (
+        <BrandMark />
+      )}
       <span className="flex flex-col leading-tight">
         <span className="font-semibold text-[#0B1F33]">{brand.name}</span>
         <span className="text-[11px] text-[#5E6B75]">{brand.tagline}</span>

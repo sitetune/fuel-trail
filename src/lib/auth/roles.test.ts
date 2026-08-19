@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   canManageOrgSettings,
   canManageUsers,
+  canMutateFleet,
+  canVerifyReceipts,
   homePathForRole,
   isManagementRole,
 } from "./roles";
@@ -11,7 +13,10 @@ describe("roles", () => {
     expect(homePathForRole("driver")).toBe("/driver");
     expect(homePathForRole("manager")).toBe("/manage");
     expect(isManagementRole("owner_admin")).toBe(true);
-    expect(isManagementRole("driver")).toBe(false);
+    expect(isManagementRole("auditor")).toBe(true);
+    expect(canVerifyReceipts("auditor")).toBe(false);
+    expect(canMutateFleet("manager")).toBe(true);
+    expect(canMutateFleet("auditor")).toBe(false);
   });
   it("reserves org security for the owner", () => {
     expect(canManageUsers("manager")).toBe(false);

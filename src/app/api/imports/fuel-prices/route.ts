@@ -1,4 +1,4 @@
-import { AuthError, requireManagement } from "@/lib/auth/session";
+import { AuthError, requireWriteManagement } from "@/lib/auth/session";
 import { apiError, apiOk } from "@/lib/api/http";
 import { validateFuelPriceCsv } from "@/lib/reports/csv";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
@@ -6,7 +6,7 @@ import { managementRecipientIds, notify } from "@/lib/notifications";
 
 export async function POST(request: Request) {
   try {
-    const user = await requireManagement();
+    const user = await requireWriteManagement();
     const form = await request.formData();
     const file = form.get("file");
     const commit = form.get("commit") === "true";

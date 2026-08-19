@@ -61,6 +61,7 @@ export default async function UsersPage({
       }))}
       trucks={trucks ?? []}
       canInvite={user.profile.role === "owner_admin"}
+      canAssign={user.profile.role === "owner_admin" || user.profile.role === "manager"}
       error={params.error === "last-owner" ? "Cannot deactivate or demote the last active owner." : undefined}
     />
     </div>

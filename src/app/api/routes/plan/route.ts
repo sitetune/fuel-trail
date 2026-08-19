@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { AuthError, requireManagement } from "@/lib/auth/session";
+import { AuthError, requireWriteManagement } from "@/lib/auth/session";
 import { apiError, apiOk } from "@/lib/api/http";
 import { enforceRateLimit } from "@/lib/api/rate-limit";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
@@ -24,7 +24,7 @@ const bodySchema = z.object({
 
 export async function POST(request: Request) {
   try {
-    const user = await requireManagement();
+    const user = await requireWriteManagement();
     const limited = await enforceRateLimit({
       bucket: "route",
       userId: user.authUserId,
@@ -33,7 +33,12 @@ export async function POST(request: Request) {
     if (limited) return limited;
     const body = bodySchema.parse(await request.json());
     const supabase = await createServerSupabaseClient();
-    const { data: truck } = await supabase.from("trucks").select("*").eq("id", body.truckId).single();
+    const { data: truck } = await supabase
+      .from("trucks")
+      .select("*")
+      .eq("id", body.truckId)
+      .eq("organization_id", user.organization.id)
+      .single();
     if (!truck) return apiError(404, "not_found", "Truck not found.");
     const { data: estimate } = await supabase
       .from("latest_fuel_estimates")

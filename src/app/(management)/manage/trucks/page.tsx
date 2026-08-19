@@ -21,7 +21,7 @@ export default async function TrucksPage() {
           </Button>
         </div>
         <div className="mb-4 space-y-2">
-          <p className="text-sm text-[#5E6B75]">Download a truck template, then import from Import Center.</p>
+          <p className="text-sm text-muted">Download a truck template, then import from Import Center.</p>
           <CsvTemplateDownloads kinds={["trucks"]} />
         </div>
         <div className="space-y-2">
@@ -30,7 +30,7 @@ export default async function TrucksPage() {
               <Card className="flex items-center justify-between">
                 <div>
                   <p className="font-semibold">Unit {truck.unit_number}</p>
-                  <p className="text-sm text-[#5E6B75]">
+                  <p className="text-sm text-muted">
                     {truck.tank_capacity_gallons} gal · {truck.target_mpg} MPG · {truck.status}
                   </p>
                 </div>

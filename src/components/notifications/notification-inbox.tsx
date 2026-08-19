@@ -40,11 +40,11 @@ export function NotificationInbox({ notifications }: { notifications: Notificati
       {rows.map((row) => (
         <Card key={row.id} className={row.read_at ? "opacity-70" : ""}>
           <p className="font-semibold">{row.title}</p>
-          <p className="text-sm text-[#5E6B75]">{row.body}</p>
-          <p className="mt-1 text-xs text-[#5E6B75]">{new Date(row.created_at).toLocaleString()}</p>
+          <p className="text-sm text-muted">{row.body}</p>
+          <p className="mt-1 text-xs text-muted">{new Date(row.created_at).toLocaleString()}</p>
           <div className="mt-2 flex flex-wrap gap-2">
             {row.href ? (
-              <Button asChild size="sm" variant="amber">
+              <Button asChild size="sm" variant="primary">
                 <Link href={row.href}>Open</Link>
               </Button>
             ) : null}

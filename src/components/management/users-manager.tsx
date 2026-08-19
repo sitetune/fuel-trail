@@ -46,7 +46,7 @@ export function UsersManager({
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-semibold">Users</h1>
-        <p className="text-sm text-[#5E6B75]">Deactivate instead of deleting anyone with receipt history.</p>
+        <p className="text-sm text-muted">Deactivate instead of deleting anyone with receipt history.</p>
       </div>
       {message ? <p className="text-sm">{message}</p> : null}
       <div className="flex flex-wrap gap-3">
@@ -70,11 +70,11 @@ export function UsersManager({
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <p className="font-semibold">{person.full_name}</p>
-                  <p className="text-sm text-[#5E6B75]">
+                  <p className="text-sm text-muted">
                     {person.email} · {person.role}
                     {person.assigned_unit ? ` · Unit ${person.assigned_unit}` : ""}
                   </p>
-                  <p className="text-xs text-[#5E6B75]">
+                  <p className="text-xs text-muted">
                     Last seen {person.last_seen_at ? new Date(person.last_seen_at).toLocaleString() : "never"} ·{" "}
                     {person.receipt_count ?? 0} receipts
                   </p>
@@ -192,7 +192,7 @@ export function UsersManager({
                   </option>
                 ))}
               </select>
-              <Button type="submit" variant="amber" className="w-full">
+              <Button type="submit" variant="primary" className="w-full">
                 Send invite
               </Button>
             </form>

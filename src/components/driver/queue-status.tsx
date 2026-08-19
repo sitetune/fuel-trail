@@ -15,7 +15,7 @@ export function QueueStatus({ userId }: { userId: string }) {
   }, [userId]);
   if (count === 0) return null;
   return (
-    <Card className="flex items-center justify-between border-[#F5A524]">
+    <Card className="flex items-center justify-between border-route">
       <p>
         <strong>{count}</strong> waiting to upload
       </p>
@@ -43,7 +43,7 @@ export function QueueList({ userId }: { userId: string }) {
       {items.map((item) => (
         <Card key={item.id}>
           <p className="font-medium">Waiting to upload</p>
-          <p className="text-sm text-[#5E6B75]">{item.fileName}</p>
+          <p className="text-sm text-muted">{item.fileName}</p>
           <RetryButton item={item} onDone={refresh} />
         </Card>
       ))}
@@ -57,7 +57,7 @@ function RetryButton({ item, onDone }: { item: QueuedReceipt; onDone: () => void
   return (
     <Button
       className="mt-3 w-full"
-      variant="amber"
+      variant="primary"
       disabled={busy}
       onClick={async () => {
         setBusy(true);

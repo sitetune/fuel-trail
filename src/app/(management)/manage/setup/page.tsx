@@ -19,7 +19,7 @@ export default async function SetupPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-semibold">Launch checklist</h1>
-        <p className="text-sm text-[#5E6B75]">
+        <p className="text-sm text-muted">
           Finish these items before asking drivers to use FuelTrail. You can keep working from the rest of Manage at any time.
         </p>
       </div>
@@ -34,12 +34,12 @@ export default async function SetupPage() {
       <Card className="space-y-3">
         <h2 className="font-semibold">Import templates</h2>
         <CsvTemplateDownloads kinds={["trucks", "drivers", "assignments"]} />
-        <Button asChild variant="amber">
+        <Button asChild variant="primary">
           <Link href="/manage/import">Open Import Center</Link>
         </Button>
       </Card>
       {checklist.complete ? (
-        <p className="text-[#198754]">This company is ready for a pilot.</p>
+        <p className="text-success">This company is ready for a pilot.</p>
       ) : null}
     </div>
   );

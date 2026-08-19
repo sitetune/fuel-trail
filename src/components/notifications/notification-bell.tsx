@@ -14,7 +14,7 @@ export async function NotificationBell({ user, href }: { user: SessionUser; href
   return (
     <Link
       href={href}
-      className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-[#0B1F33] hover:bg-[#F7F8FA]"
+      className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-ink hover:bg-warm"
     >
       Alerts
       {unread > 0 ? <Badge tone="alert">{unread > 99 ? "99+" : unread}</Badge> : null}

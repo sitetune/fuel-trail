@@ -65,7 +65,7 @@ export function FleetImportForm({
     <Card className="space-y-4">
       <div>
         <h2 className="font-semibold">Import fleet CSV</h2>
-        <p className="text-sm text-[#5E6B75]">
+        <p className="text-sm text-muted">
           Download a template, fill your rows, then upload. Map columns if your file uses different headers.
         </p>
       </div>
@@ -195,7 +195,7 @@ export function FleetImportForm({
           {canCommit ? (
             <Button
               type="button"
-              variant="amber"
+              variant="primary"
               onClick={(event) => {
                 const form = event.currentTarget.form;
                 if (form) void runImport(form, true);
@@ -204,7 +204,7 @@ export function FleetImportForm({
               Commit valid rows
             </Button>
           ) : (
-            <p className="text-sm text-[#5E6B75]">Auditors can preview imports but cannot commit them.</p>
+            <p className="text-sm text-muted">Auditors can preview imports but cannot commit them.</p>
           )}
         </div>
       </form>

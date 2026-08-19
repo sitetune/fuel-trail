@@ -1,13 +1,20 @@
 export const brand = {
   name: "FuelTrail",
-  tagline: "Every gallon. Every truck. One clear trail.",
+  tagline: "Smarter fuel decisions. Further.",
+  valueLine: "Capture receipts. Manage trucks. Analyze spending. Find savings.",
   colors: {
-    navy: "#0B1F33",
-    amber: "#F5A524",
-    road: "#5E6B75",
-    success: "#198754",
-    alert: "#C93C37",
-    offWhite: "#F7F8FA",
+    navy: "#0B1728",
+    ink: "#0B1728",
+    route: "#176BFF",
+    steel: "#AAB5C4",
+    muted: "#4E5C6B",
+    warm: "#F6F5F1",
+    success: "#1F8A5B",
+    alert: "#C4453C",
+    offWhite: "#F6F5F1",
+    /** @deprecated Use route. Kept so older imports keep compiling. */
+    amber: "#176BFF",
+    road: "#4E5C6B",
   },
   defaults: {
     timezone: "America/Chicago",

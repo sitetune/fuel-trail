@@ -23,7 +23,7 @@ export function TruckCharts({
   return (
     <Card>
       <h2 className="mb-2 font-semibold">Trends</h2>
-      <p className="mb-4 text-sm text-[#5E6B75]">
+      <p className="mb-4 text-sm text-muted">
         Spend, gallons, and average price by month. Cost per mile appears only when odometer miles exist.
       </p>
       <div className="h-72 w-full">
@@ -34,8 +34,8 @@ export function TruckCharts({
             <YAxis />
             <Tooltip />
             <Legend />
-            <Line type="monotone" dataKey="spend" stroke="#0B1F33" name="Spend" />
-            <Line type="monotone" dataKey="gallons" stroke="#F5A524" name="Gallons" />
+            <Line type="monotone" dataKey="spend" stroke="#0B1728" name="Spend" />
+            <Line type="monotone" dataKey="gallons" stroke="#176BFF" name="Gallons" />
           </LineChart>
         </ResponsiveContainer>
       </div>

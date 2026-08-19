@@ -71,7 +71,7 @@ export default async function SavingsPage() {
   return (
     <div className="space-y-6">
       <h1 className="text-3xl font-semibold">Savings Finder</h1>
-      <p className="text-sm text-[#5E6B75]">
+      <p className="text-sm text-muted">
         Estimated only. Opportunities use stored receipts and manager/CSV prices. Comparison radius is {radiusMiles} miles;
         prices older than {freshnessHours} hours are ignored.
       </p>
@@ -85,16 +85,16 @@ export default async function SavingsPage() {
             <p className="text-sm">
               Paid {formatUsd(row.paidPrice)}/gal. {row.explanation}
             </p>
-            <p className="mt-1 text-xs text-[#5E6B75]">
+            <p className="mt-1 text-xs text-muted">
               Confidence: {row.confidence}
               {row.comparisonPrice != null ? ` · comparable ${formatUsd(row.comparisonPrice)}/gal` : ""}
             </p>
             {row.trailerNotes.map((note) => (
-              <p key={note} className="text-sm text-[#5E6B75]">
+              <p key={note} className="text-sm text-muted">
                 {note}
               </p>
             ))}
-            <ul className="mt-2 list-disc pl-5 text-xs text-[#5E6B75]">
+            <ul className="mt-2 list-disc pl-5 text-xs text-muted">
               {row.assumptions.map((assumption) => (
                 <li key={assumption}>{assumption}</li>
               ))}

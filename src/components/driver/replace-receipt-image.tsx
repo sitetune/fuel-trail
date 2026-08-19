@@ -64,7 +64,7 @@ export function ReplaceReceiptImage({ receiptId }: { receiptId: string }) {
         }}
       />
       {!preview ? (
-        <Button className="w-full" size="lg" variant="amber" onClick={() => inputRef.current?.click()}>
+        <Button className="w-full" size="lg" variant="primary" onClick={() => inputRef.current?.click()}>
           Open camera
         </Button>
       ) : (
@@ -75,14 +75,14 @@ export function ReplaceReceiptImage({ receiptId }: { receiptId: string }) {
             <Button className="flex-1" variant="outline" onClick={() => inputRef.current?.click()}>
               Retake
             </Button>
-            <Button className="flex-1" variant="amber" onClick={replace} disabled={working}>
+            <Button className="flex-1" variant="primary" onClick={replace} disabled={working}>
               {working ? "Working…" : "Use photo"}
             </Button>
           </div>
         </Card>
       )}
-      {status ? <p className="text-sm text-[#5E6B75]">{status}</p> : null}
-      <p className="text-sm text-[#5E6B75]">The previous photo is kept. This creates a new version of the same receipt.</p>
+      {status ? <p className="text-sm text-muted">{status}</p> : null}
+      <p className="text-sm text-muted">The previous photo is kept. This creates a new version of the same receipt.</p>
     </div>
   );
 }

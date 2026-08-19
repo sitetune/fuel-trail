@@ -1,0 +1,15 @@
+---
+description: FuelTrail visual system. Apply on any UI, CSS, or brand work.
+globs: src/**/*.{tsx,ts,css},docs/brand/**,public/icons/**
+alwaysApply: false
+---
+
+# FuelTrail UI
+
+Follow [docs/brand/style-guide.md](docs/brand/style-guide.md) and the board at [docs/brand/fueltrail-style-guide.png](docs/brand/fueltrail-style-guide.png). Execute with Taste Skill ([Leonxlnx/taste-skill](https://github.com/Leonxlnx/taste-skill)) using VARIANCE 4, MOTION 3, DENSITY 6/4.
+
+- Tokens only: Ink `#0B1728`, Route `#176BFF`, Warm `#F6F5F1`, Steel `#AAB5C4`, muted text `#4E5C6B`.
+- Sora = `font-display`. Inter = `font-sans`. Route Blue is the only accent.
+- Driver: navy header, capture-first. Manager/admin: left sidebar, Route Blue active pill.
+- Do not reintroduce amber `#F5A524` or the old teardrop mark.
+- Phosphor icons, stroke 1.5. No second icon family.

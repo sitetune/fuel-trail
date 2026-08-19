@@ -32,7 +32,7 @@ export function NotificationPreferences({
     <Card className="space-y-3">
       <div>
         <h2 className="font-semibold">Email preferences</h2>
-        <p className="text-sm text-[#5E6B75]">
+        <p className="text-sm text-muted">
           In-app alerts always appear. Email is sent only when a Resend key is configured and you check a box below.
         </p>
       </div>

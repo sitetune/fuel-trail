@@ -16,7 +16,7 @@ export function ReceiptThumb({
     <>
       <button
         type="button"
-        className="block shrink-0 overflow-hidden rounded border border-[#5E6B75]/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400"
+        className="block shrink-0 overflow-hidden rounded border border-steel/35 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-route"
         onClick={(event) => {
           event.preventDefault();
           event.stopPropagation();
@@ -28,12 +28,12 @@ export function ReceiptThumb({
         <img
           src={`/api/receipts/${receiptId}/image`}
           alt=""
-          className={className ?? "h-16 w-12 bg-[#F7F8FA] object-cover"}
+          className={className ?? "h-16 w-12 bg-warm object-cover"}
         />
       </button>
       {open ? (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-[#0B1F33]/70 p-4"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-ink/70 p-4"
           role="dialog"
           aria-modal="true"
           aria-label="Receipt preview"

@@ -1,12 +1,16 @@
+import type { HTMLAttributes } from "react";
 import { cn } from "@/lib/utils";
 
 export function Card({
   className,
   ...props
-}: React.HTMLAttributes<HTMLDivElement>) {
+}: HTMLAttributes<HTMLDivElement>) {
   return (
     <div
-      className={cn("rounded-xl border border-[#5E6B75]/20 bg-white p-4 shadow-sm", className)}
+      className={cn(
+        "rounded-xl border border-steel/25 bg-white p-4 shadow-[0_8px_24px_rgba(11,23,40,0.06)]",
+        className,
+      )}
       {...props}
     />
   );
@@ -16,20 +20,21 @@ export function Badge({
   className,
   tone = "neutral",
   ...props
-}: React.HTMLAttributes<HTMLSpanElement> & {
-  tone?: "neutral" | "success" | "alert" | "amber" | "navy";
+}: HTMLAttributes<HTMLSpanElement> & {
+  tone?: "neutral" | "success" | "alert" | "amber" | "navy" | "route";
 }) {
   const tones = {
-    neutral: "bg-[#F7F8FA] text-[#5E6B75]",
-    success: "bg-[#198754]/10 text-[#198754]",
-    alert: "bg-[#C93C37]/10 text-[#C93C37]",
-    amber: "bg-[#F5A524]/20 text-[#0B1F33]",
-    navy: "bg-[#0B1F33] text-white",
+    neutral: "bg-warm text-muted",
+    success: "bg-success/10 text-success",
+    alert: "bg-alert/10 text-alert",
+    amber: "bg-route/10 text-route",
+    route: "bg-route/10 text-route",
+    navy: "bg-ink text-white",
   };
   return (
     <span
       className={cn(
-        "inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold",
+        "inline-flex items-center rounded-md px-2.5 py-1 text-xs font-semibold",
         tones[tone],
         className,
       )}

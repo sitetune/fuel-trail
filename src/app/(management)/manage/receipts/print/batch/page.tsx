@@ -35,7 +35,7 @@ export default async function BatchPrintPage({
           .receipt-print-page { break-after: page; }
         }
       `}</style>
-      <p className="no-print text-sm text-[#5E6B75]">
+      <p className="no-print text-sm text-muted">
         Printing {ids.length} receipt{ids.length === 1 ? "" : "s"} (limit {BATCH_LIMIT}). Use your browser print dialog to save PDF.
       </p>
       <div className="no-print">

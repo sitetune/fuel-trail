@@ -14,7 +14,7 @@ export default async function StationsPage() {
         {(stations ?? []).map((station) => (
           <Card key={station.id}>
             <p className="font-semibold">{station.name}</p>
-            <p className="text-sm text-[#5E6B75]">
+            <p className="text-sm text-muted">
               {station.city}, {station.region} · truck access {station.truck_access} · parking{" "}
               {station.parking_available}
               {station.trailer_policy === "drop_required" && !station.drop_location_verified_at

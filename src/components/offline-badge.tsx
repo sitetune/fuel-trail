@@ -16,7 +16,7 @@ export function OfflineBadge() {
   }, []);
   if (online) return null;
   return (
-    <div className="bg-[#C93C37] px-3 py-2 text-center text-sm font-semibold text-white">
+    <div className="bg-alert px-3 py-2 text-center text-sm font-semibold text-white">
       Offline — receipts will wait on this device until you retry.
     </div>
   );

@@ -70,7 +70,7 @@ export function ReceiptManager({
           <Input value={merchant} onChange={(event) => setMerchant(event.target.value)} />
           <Label>Gallons</Label>
           <Input value={gallons} onChange={(event) => setGallons(event.target.value)} />
-          <p className="text-sm text-[#5E6B75]">
+          <p className="text-sm text-muted">
             {receipt.merchant_region} · {receipt.status}
             {receipt.duplicate_of && !receipt.duplicate_override ? " · likely duplicate" : ""}
           </p>
@@ -97,7 +97,7 @@ export function ReceiptManager({
               <li key={event.id}>
                 <strong>{event.event_type}</strong> · {new Date(event.created_at).toLocaleString()}
                 {event.field_changes ? (
-                  <pre className="mt-1 overflow-x-auto rounded bg-[#F7F8FA] p-2 text-xs">
+                  <pre className="mt-1 overflow-x-auto rounded bg-warm p-2 text-xs">
                     {JSON.stringify(event.field_changes, null, 2)}
                   </pre>
                 ) : null}

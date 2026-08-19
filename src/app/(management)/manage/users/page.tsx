@@ -39,7 +39,7 @@ export default async function UsersPage({
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-3xl font-semibold">Users</h1>
-          <p className="text-sm text-[#5E6B75]">Invite one person, or import a driver CSV from Import Center.</p>
+          <p className="text-sm text-muted">Invite one person, or import a driver CSV from Import Center.</p>
         </div>
         <Button asChild variant="outline">
           <Link href="/manage/import">Import drivers CSV</Link>

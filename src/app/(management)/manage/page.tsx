@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { EstimatedFuelGauge } from "@/components/estimated-fuel-gauge";
 import { Badge, Card } from "@/components/ui/card";
+import { MetricCard, PageHeader } from "@/components/ui/page-header";
 import { requireManagement } from "@/lib/auth/session";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { explainSpendChange, monthRangeInTimezone, previousMonthRangeInTimezone, weightedAveragePrice } from "@/lib/calculations";
@@ -52,44 +53,46 @@ export default async function ManageDashboardPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-semibold">Fleet</h1>
-      <p className="text-sm">
-        <Link className="font-medium underline" href="/manage/setup">
-          Launch checklist
-        </Link>
-        {" · "}
-        <Link className="font-medium underline" href="/manage/import">
-          Import CSV templates
-        </Link>
-      </p>
+      <PageHeader
+        title="Dashboard"
+        description="Truck-first spend, gallons, and estimated fuel for this month."
+        actions={
+          <>
+            <Link className="text-sm font-medium text-route" href="/manage/setup">
+              Launch checklist
+            </Link>
+            <Link className="text-sm font-medium text-route" href="/manage/import">
+              Import
+            </Link>
+          </>
+        }
+      />
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <p className="text-sm text-[#5E6B75]">Active trucks</p>
-          <p className="text-2xl font-semibold">{trucks?.length ?? 0}</p>
-        </Card>
-        <Card>
-          <p className="text-sm text-[#5E6B75]">Fuel spend this month</p>
-          <p className="text-2xl font-semibold">{formatUsd(spend)}</p>
-        </Card>
-        <Card>
-          <p className="text-sm text-[#5E6B75]">Gallons this month</p>
-          <p className="text-2xl font-semibold">{gallons.toFixed(1)}</p>
-        </Card>
-        <Card>
-          <p className="text-sm text-[#5E6B75]">Fleet average price</p>
-          <p className="text-2xl font-semibold">{avg === null ? "—" : formatUsd(avg)}</p>
-        </Card>
+        <MetricCard label="Active trucks" value={trucks?.length ?? 0} />
+        <MetricCard
+          label="Fuel spend"
+          value={formatUsd(spend)}
+          hint={
+            explanation.spendChange.percent == null ? undefined : (
+              <span className={explanation.spendChange.percent < 0 ? "text-success" : "text-muted"}>
+                {explanation.spendChange.percent}% vs last month
+              </span>
+            )
+          }
+        />
+        <MetricCard label="Gallons" value={gallons.toFixed(1)} />
+        <MetricCard label="Fleet average price" value={avg === null ? "—" : formatUsd(avg)} />
       </div>
       <Card>
         <p className="font-medium">
           Month-over-month spend {explanation.spendChange.percent === null ? "has no prior baseline" : `${explanation.spendChange.percent}%`}.
         </p>
-        <p className="mt-1 text-sm text-[#5E6B75]">{explanation.summary}</p>
+        <p className="mt-1 text-sm text-muted">{explanation.summary}</p>
       </Card>
       <div className="flex flex-wrap items-center gap-2">
         <Badge tone="alert">{needsReview} receipts needing review</Badge>
-        <Badge tone="amber">{duplicates} suspected duplicates</Badge>
-        <Link className="text-sm font-medium underline" href="/manage/receipts">
+        <Badge tone="route">{duplicates} suspected duplicates</Badge>
+        <Link className="text-sm font-medium text-route" href="/manage/receipts">
           Open Receipt Center
         </Link>
       </div>
@@ -106,7 +109,7 @@ export default async function ManageDashboardPage() {
                 <div className="flex items-start justify-between">
                   <div>
                     <p className="text-xl font-semibold">Unit {truck.unit_number}</p>
-                    <p className="text-sm text-[#5E6B75]">
+                    <p className="text-sm text-muted">
                       {(assignment?.profiles as { full_name?: string } | null)?.full_name ?? "Unassigned"}
                     </p>
                   </div>
@@ -123,7 +126,7 @@ export default async function ManageDashboardPage() {
                     weekStartMinGallons={Number(truck.week_start_min_gallons)}
                   />
                 </div>
-                <p className="mt-2 text-sm text-[#5E6B75]">{truckGallons.toFixed(1)} gal this month</p>
+                <p className="mt-2 text-sm text-muted">{truckGallons.toFixed(1)} gal this month</p>
               </Card>
             </Link>
           );
@@ -133,7 +136,7 @@ export default async function ManageDashboardPage() {
         <table className="w-full min-w-[720px] text-left text-sm">
           <caption className="sr-only">Fleet trucks with estimated fuel and month spend</caption>
           <thead>
-            <tr className="border-b text-[#5E6B75]">
+            <tr className="border-b border-steel/30 text-muted">
               <th className="py-2">Unit</th>
               <th>Driver</th>
               <th>Estimated fuel</th>
@@ -151,9 +154,9 @@ export default async function ManageDashboardPage() {
               const truckGallons = monthRows.reduce((sum, row) => sum + Number(row.gallons ?? 0), 0);
               const truckAvg = weightedAveragePrice({ spend: truckSpend, gallons: truckGallons });
               return (
-                <tr key={truck.id} className="border-b">
+                <tr key={truck.id} className="border-b border-steel/20">
                   <td className="py-3">
-                    <Link className="font-semibold underline" href={`/manage/trucks/${truck.id}`}>
+                    <Link className="font-semibold text-route" href={`/manage/trucks/${truck.id}`}>
                       {truck.unit_number}
                     </Link>
                   </td>

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { FileDashed } from "@phosphor-icons/react/ssr";
 import { EstimatedFuelGauge } from "@/components/estimated-fuel-gauge";
 import { Badge } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,6 +8,7 @@ import { Card } from "@/components/ui/card";
 import { requireSession } from "@/lib/auth/session";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { QueueStatus } from "@/components/driver/queue-status";
+import { formatUsd } from "@/lib/utils";
 
 export default async function DriverHomePage() {
   const user = await requireSession();
@@ -30,7 +32,7 @@ export default async function DriverHomePage() {
     : { data: null };
   const { data: receipts } = await supabase
     .from("fuel_receipts")
-    .select("id, status, gallons, purchased_at, merchant_name")
+    .select("id, status, gallons, purchased_at, merchant_name, total_amount")
     .eq("driver_id", user.authUserId)
     .order("created_at", { ascending: false })
     .limit(3);
@@ -47,12 +49,24 @@ export default async function DriverHomePage() {
 
   return (
     <div className="space-y-4">
-      <Card>
-        <p className="text-sm text-[#5E6B75]">Assigned truck</p>
-        <p className="text-3xl font-semibold">{truck?.unit_number ?? "Unassigned"}</p>
+      <Card className="space-y-4 p-5">
+        <div className="flex items-start gap-3">
+          <span className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-route/10 text-route">
+            <FileDashed size={28} />
+          </span>
+          <div>
+            <h1 className="font-display text-xl font-semibold tracking-tight">Capture receipt</h1>
+            <p className="text-sm text-muted">
+              {truck ? `Truck ${truck.unit_number}` : "No truck assigned yet"}
+            </p>
+          </div>
+        </div>
         {!truck ? (
-          <p className="mt-2 text-sm text-[#C93C37]">Ask a manager to assign you to a truck.</p>
+          <p className="text-sm font-medium text-alert">Ask a manager to assign you to a truck.</p>
         ) : null}
+        <Button asChild variant="primary" size="lg" className="w-full">
+          <Link href="/driver/receipts/new">Add receipt</Link>
+        </Button>
       </Card>
       {truck ? (
         <Card>
@@ -69,35 +83,40 @@ export default async function DriverHomePage() {
       {plan ? (
         <Card>
           <p className="text-sm font-semibold">Manager fuel-stop recommendation</p>
-          <p className="mt-1 text-lg">
-            {(plan.fuel_stations as { name?: string } | null)?.name ?? "See issued plan"} — buy{" "}
+          <p className="mt-1 font-display text-lg font-semibold">
+            {(plan.fuel_stations as { name?: string } | null)?.name ?? "See issued plan"} · buy{" "}
             {plan.recommended_purchase_gallons ?? "—"} gal
           </p>
-          <p className="text-sm text-[#5E6B75]">You make the final safety decision.</p>
+          <p className="text-sm text-muted">You make the final safety decision.</p>
         </Card>
       ) : null}
-      <Button asChild variant="amber" size="lg" className="w-full text-lg">
-        <Link href="/driver/receipts/new">Scan fuel receipt</Link>
-      </Button>
       <QueueStatus userId={user.authUserId} />
       <section>
-        <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-[#5E6B75]">Latest receipts</h2>
+        <h2 className="mb-2 font-display text-base font-semibold tracking-tight">Recent stops</h2>
         <div className="space-y-2">
           {(receipts ?? []).length === 0 ? (
-            <Card>No receipts yet.</Card>
+            <Card className="text-sm text-muted">No receipts yet. Add one after you fuel.</Card>
           ) : (
             receipts?.map((receipt) => (
-              <Link key={receipt.id} href={`/driver/receipts/${receipt.id}`}>
-                <Card className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium">{receipt.merchant_name ?? "Draft"}</p>
-                    <p className="text-sm text-[#5E6B75]">
-                      {receipt.gallons ? `${receipt.gallons} gal` : "In progress"}
+              <Link key={receipt.id} href={`/driver/receipts/${receipt.id}`} className="block">
+                <Card className="flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="truncate font-medium">{receipt.merchant_name ?? "Draft"}</p>
+                    <p className="text-sm text-muted">
+                      {receipt.purchased_at
+                        ? new Date(receipt.purchased_at).toLocaleDateString()
+                        : "In progress"}
+                      {receipt.gallons ? ` · ${receipt.gallons} gal` : ""}
                     </p>
                   </div>
-                  <Badge tone={receipt.status === "verified" ? "success" : receipt.status === "rejected" ? "alert" : "amber"}>
-                    {receipt.status.replace("_", " ")}
-                  </Badge>
+                  <div className="text-right">
+                    <p className="font-display text-base font-semibold tabular-nums">
+                      {receipt.total_amount != null ? formatUsd(Number(receipt.total_amount)) : ""}
+                    </p>
+                    <Badge tone={receipt.status === "verified" ? "success" : receipt.status === "rejected" ? "alert" : "route"}>
+                      {receipt.status.replace("_", " ")}
+                    </Badge>
+                  </div>
                 </Card>
               </Link>
             ))

@@ -16,7 +16,7 @@ export default async function RoutesPage() {
     <div className="grid gap-6 lg:grid-cols-2">
       <div>
         <h1 className="mb-2 text-3xl font-semibold">Fuel-stop planner</h1>
-        <p className="mb-4 text-sm text-[#5E6B75]">
+        <p className="mb-4 text-sm text-muted">
           Manual mode is fully usable with imported or manager-entered prices. HERE truck routing is
           optional when <code>HERE_API_KEY</code> is configured. Do not drop a trailer unless parking
           is manager-verified.
@@ -30,7 +30,7 @@ export default async function RoutesPage() {
             <p className="font-medium">
               Unit {(plan.trucks as { unit_number: string }).unit_number} · {plan.status}
             </p>
-            <p className="text-sm text-[#5E6B75]">
+            <p className="text-sm text-muted">
               {plan.origin_text} → {plan.destination_text}
             </p>
           </Card>

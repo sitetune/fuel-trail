@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 
 export function PrintButton() {
   return (
-    <Button type="button" variant="amber" className="no-print" onClick={() => window.print()}>
+    <Button type="button" variant="primary" className="no-print" onClick={() => window.print()}>
       Print this receipt
     </Button>
   );

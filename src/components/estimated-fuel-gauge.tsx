@@ -27,31 +27,31 @@ export function EstimatedFuelGauge({
   return (
     <div className="space-y-2">
       <div className="flex items-baseline justify-between gap-2">
-        <p className="text-sm font-semibold text-[#0B1F33]">Estimated fuel</p>
-        <p className="text-xs uppercase tracking-wide text-[#5E6B75]">{confidence} confidence</p>
+        <p className="text-sm font-semibold text-ink">Estimated fuel</p>
+        <p className="text-xs font-medium tracking-wide text-muted">{confidence} confidence</p>
       </div>
-      <div className={cn("w-full overflow-hidden rounded-full bg-[#E6E9EC]", height)} aria-hidden="true">
+      <div className={cn("w-full overflow-hidden rounded-full bg-steel/30", height)} aria-hidden="true">
         <div
           className={cn(
             "h-full rounded-full",
-            belowReserve ? "bg-[#C93C37]" : belowMonday ? "bg-[#F5A524]" : "bg-[#198754]",
+            belowReserve ? "bg-alert" : belowMonday ? "bg-route" : "bg-success",
           )}
           style={{ width: `${percent ?? 0}%` }}
         />
       </div>
-      <p className="text-lg font-semibold text-[#0B1F33]">
+      <p className="font-display text-lg font-semibold tabular-nums text-ink">
         {gallons === null ? "Unknown" : `${formatGallons(gallons)} (${formatPercent(percent)})`}
-        <span className="ml-2 text-sm font-normal text-[#5E6B75]">of {formatGallons(capacity, 0)}</span>
+        <span className="ml-2 text-sm font-normal text-muted">of {formatGallons(capacity, 0)}</span>
       </p>
-      <p className="text-xs text-[#5E6B75]">
+      <p className="text-xs text-muted">
         Calculated estimate, not a live tank sensor.
         {calculatedAt ? ` Last updated ${new Date(calculatedAt).toLocaleString()}.` : " No estimate yet."}
       </p>
       {belowReserve ? (
-        <p className="text-sm font-medium text-[#C93C37]">Below reserve ({formatGallons(reserveGallons, 0)}).</p>
+        <p className="text-sm font-medium text-alert">Below reserve ({formatGallons(reserveGallons, 0)}).</p>
       ) : null}
       {belowMonday ? (
-        <p className="text-sm font-medium text-[#0B1F33]">
+        <p className="text-sm font-medium text-ink">
           Below Monday / start-of-week minimum ({formatGallons(weekStartMinGallons, 0)}).
         </p>
       ) : null}

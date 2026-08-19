@@ -153,7 +153,7 @@ export function ReceiptReviewForm({
   }
 
   const highlight = (confidence: number | null | undefined, missing: boolean) =>
-    missing || low(confidence) ? "border-[#F5A524] bg-[#F5A524]/10" : "";
+    missing || low(confidence) ? "border-route bg-route/10" : "";
 
   return (
     <form
@@ -172,7 +172,7 @@ export function ReceiptReviewForm({
     >
       <Card className="space-y-2">
         {status === "rejected" ? (
-          <p className="rounded-md bg-[#C93C37]/10 p-3 text-sm font-semibold text-[#C93C37]">
+          <p className="rounded-md bg-alert/10 p-3 text-sm font-semibold text-alert">
             Rejected — Action Required{rejectionReason ? `: ${rejectionReason}` : ""}
           </p>
         ) : null}
@@ -182,12 +182,12 @@ export function ReceiptReviewForm({
           alt="Stored receipt"
           className="max-h-64 w-full object-contain"
         />
-        {ocrBusy ? <p className="text-sm text-[#0B1F33]">{ocrStatus}</p> : null}
+        {ocrBusy ? <p className="text-sm text-ink">{ocrStatus}</p> : null}
         {!ocrBusy && ocrStatus && !extractionHasValues(fields) ? (
-          <p className="text-sm text-[#0B1F33]">{ocrStatus}</p>
+          <p className="text-sm text-ink">{ocrStatus}</p>
         ) : null}
         {(fields?.warnings ?? []).map((warning) => (
-          <p key={warning} className="text-sm text-[#0B1F33]">
+          <p key={warning} className="text-sm text-ink">
             {warning}
           </p>
         ))}
@@ -327,7 +327,7 @@ export function ReceiptReviewForm({
         <select
           id="tankLevelAfterMode"
           name="tankLevelAfterMode"
-          className="h-11 w-full rounded-md border border-[#5E6B75]/30 px-3"
+          className="h-11 w-full rounded-md border border-steel/40 px-3"
           defaultValue={rules?.requireTankLevel ? "" : "unknown"}
           required={Boolean(rules?.requireTankLevel)}
         >
@@ -345,7 +345,7 @@ export function ReceiptReviewForm({
       </label>
       <Textarea name="driverNote" placeholder="Note for managers (optional)" />
       <FieldError message={error ?? undefined} />
-      <Button type="submit" variant="amber" size="lg" className="w-full" disabled={busy || ocrBusy}>
+      <Button type="submit" variant="primary" size="lg" className="w-full" disabled={busy || ocrBusy}>
         {ocrBusy ? "Reading receipt…" : status === "rejected" ? "Resubmit receipt" : "Submit receipt"}
       </Button>
       <Badge tone="amber">OCR is an assistant. Confirm every value before submitting.</Badge>

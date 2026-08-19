@@ -21,9 +21,9 @@ export default async function SettingsPage({
     <Card className="max-w-xl space-y-3">
       <h1 className="text-3xl font-semibold">Organization settings</h1>
       {params.error === "retention" ? (
-        <p className="text-[#C93C37]">Retention cannot be below 4 years.</p>
+        <p className="text-alert">Retention cannot be below 4 years.</p>
       ) : null}
-      {params.saved ? <p className="text-[#198754]">Saved.</p> : null}
+      {params.saved ? <p className="text-success">Saved.</p> : null}
       <form action={updateOrgSettingsAction} className="space-y-3">
         <Label htmlFor="name">Name</Label>
         <Input id="name" name="name" defaultValue={org.name} />
@@ -53,7 +53,7 @@ export default async function SettingsPage({
         <Input id="retention_years" name="retention_years" type="number" min={4} defaultValue={org.retention_years} />
         <fieldset className="space-y-2 rounded-md border p-3">
           <legend className="font-medium">Receipt review rules</legend>
-          <p className="text-sm text-[#5E6B75]">Drivers cannot submit until these fields are filled.</p>
+          <p className="text-sm text-muted">Drivers cannot submit until these fields are filled.</p>
           <label className="flex min-h-11 items-center gap-2 text-sm">
             <input type="checkbox" name="require_odometer" className="h-5 w-5" defaultChecked={rules.requireOdometer} />
             Require odometer
@@ -71,7 +71,7 @@ export default async function SettingsPage({
             Require tank level after fueling
           </label>
         </fieldset>
-        <Button type="submit" variant="amber">
+        <Button type="submit" variant="primary">
           Save settings
         </Button>
       </form>

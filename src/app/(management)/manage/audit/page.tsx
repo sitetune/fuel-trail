@@ -29,7 +29,7 @@ export default async function AuditLogPage({
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-3xl font-semibold">Audit log</h1>
-          <p className="text-sm text-[#5E6B75]">Append-only organization events. Receipt field changes also appear on each receipt.</p>
+          <p className="text-sm text-muted">Append-only organization events. Receipt field changes also appear on each receipt.</p>
         </div>
         <Button asChild variant="outline">
           <a

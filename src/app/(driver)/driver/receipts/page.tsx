@@ -24,7 +24,7 @@ export default async function DriverReceiptsPage() {
       <h1 className="text-2xl font-semibold">Receipts</h1>
       {actionRequired.length > 0 ? (
         <section className="space-y-2">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-[#C93C37]">Rejected — Action Required</h2>
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-alert">Rejected — Action Required</h2>
           {actionRequired.map((receipt) => (
             <DriverReceiptCard key={receipt.id} receipt={receipt} />
           ))}
@@ -66,7 +66,7 @@ function DriverReceiptCard({
           <p className="font-semibold">{receipt.merchant_name ?? "Draft"}</p>
           <ReceiptStatusBadge status={receipt.status} />
         </div>
-        <p className="text-sm text-[#5E6B75]">
+        <p className="text-sm text-muted">
           Unit {truck?.unit_number ?? "—"} · {formatReceiptDate(receipt.purchased_at)}
         </p>
         <p className="text-sm">
@@ -74,7 +74,7 @@ function DriverReceiptCard({
           {formatUsd(receipt.total_amount == null ? null : Number(receipt.total_amount))}
         </p>
         {receipt.status === "rejected" && receipt.rejection_reason ? (
-          <p className="mt-1 text-sm text-[#C93C37]">{receipt.rejection_reason}</p>
+          <p className="mt-1 text-sm text-alert">{receipt.rejection_reason}</p>
         ) : null}
       </Link>
     </Card>

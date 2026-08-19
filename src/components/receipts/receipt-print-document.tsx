@@ -33,14 +33,14 @@ export function ReceiptPrintDocument({ receipt }: { receipt: PrintableReceipt })
   return (
     <article className="receipt-print-page space-y-6 break-after-page bg-white p-6">
       <header className="relative border-b pb-4">
-        <p className="text-sm text-[#5E6B75]">FuelTrail receipt record</p>
+        <p className="text-sm text-muted">FuelTrail receipt record</p>
         <h1 className="text-2xl font-semibold">
           Unit {receipt.trucks?.unit_number} · {receipt.merchant_name}
         </h1>
         <p>
           Driver {receipt.profiles?.full_name ?? "—"} · {formatReceiptDate(receipt.purchased_at)}
         </p>
-        <p className="absolute right-0 top-0 rotate-12 border-4 border-[#0B1F33] px-4 py-1 text-2xl font-black uppercase tracking-widest text-[#0B1F33]/40">
+        <p className="absolute right-0 top-0 rotate-12 border-4 border-ink px-4 py-1 text-2xl font-black uppercase tracking-widest text-ink/40">
           {watermark}
         </p>
       </header>

@@ -70,7 +70,7 @@ export default async function ReceiptCenterPage({
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-3xl font-semibold">Receipt Center</h1>
-          <p className="text-sm text-[#5E6B75]">{total} receipt{total === 1 ? "" : "s"}</p>
+          <p className="text-sm text-muted">{total} receipt{total === 1 ? "" : "s"}</p>
         </div>
         <Button asChild variant="outline">
           <Link href="/manage/receipts">Clear filters</Link>
@@ -144,7 +144,7 @@ export default async function ReceiptCenterPage({
             </select>
           </div>
           <div className="flex items-end">
-            <Button type="submit" variant="amber" className="w-full">
+            <Button type="submit" variant="primary" className="w-full">
               Apply
             </Button>
           </div>
@@ -166,12 +166,12 @@ export default async function ReceiptCenterPage({
                 <ReceiptStatusBadge status={receipt.status} />
               </div>
               <p className="text-sm">{receipt.merchant_name ?? "—"}</p>
-              <p className="text-sm text-[#5E6B75]">
+              <p className="text-sm text-muted">
                 {formatReceiptDate(receipt.purchased_at)} · {formatGallons(receipt.gallons == null ? null : Number(receipt.gallons), 3)} ·{" "}
                 {formatUsd(receipt.total_amount == null ? null : Number(receipt.total_amount))}
               </p>
               {isLowOcrConfidence(receipt.ocr_confidence == null ? null : Number(receipt.ocr_confidence)) ? (
-                <p className="text-sm text-[#C93C37]">{ocrConfidenceLabel(Number(receipt.ocr_confidence))}</p>
+                <p className="text-sm text-alert">{ocrConfidenceLabel(Number(receipt.ocr_confidence))}</p>
               ) : null}
             </Link>
           </Card>
@@ -180,7 +180,7 @@ export default async function ReceiptCenterPage({
       <div className="hidden overflow-x-auto md:block">
         <table className="w-full min-w-[1100px] text-left text-sm">
           <thead>
-            <tr className="border-b text-[#5E6B75]">
+            <tr className="border-b text-muted">
               <th className="py-2">Image</th>
               <th>
                 <Link href={receiptCenterQuery(filters, { sort: "purchased_at", dir: filters.dir === "asc" ? "desc" : "asc", page: 1 })}>
@@ -234,7 +234,7 @@ export default async function ReceiptCenterPage({
                 <td className="py-2">
                   <ReceiptStatusBadge status={receipt.status} />
                   {isLowOcrConfidence(receipt.ocr_confidence == null ? null : Number(receipt.ocr_confidence)) ? (
-                    <p className="mt-1 text-xs text-[#C93C37]">{ocrConfidenceLabel(Number(receipt.ocr_confidence))}</p>
+                    <p className="mt-1 text-xs text-alert">{ocrConfidenceLabel(Number(receipt.ocr_confidence))}</p>
                   ) : null}
                 </td>
                 <td className="py-2">
@@ -255,7 +255,7 @@ export default async function ReceiptCenterPage({
       </div>
       {(receipts ?? []).length === 0 ? <Card>No receipts match these filters.</Card> : null}
       <div className="flex items-center justify-between gap-3">
-        <p className="text-sm text-[#5E6B75]">
+        <p className="text-sm text-muted">
           Page {page} of {pages}
         </p>
         <div className="flex gap-2">

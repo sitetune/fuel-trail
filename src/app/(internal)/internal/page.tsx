@@ -26,8 +26,8 @@ export default async function InternalHomePage() {
   }
   return (
     <div className="space-y-4">
-      <h1 className="text-3xl font-semibold">FuelTrail admin</h1>
-      <p className="text-sm text-[#5E6B75]">
+      <h1 className="font-display text-3xl font-semibold tracking-tight">Organizations</h1>
+      <p className="text-sm text-muted">
         Platform view only. There is no silent impersonation. Support access is time-limited and audited.
       </p>
       {(orgs ?? []).map((org) => (
@@ -35,18 +35,18 @@ export default async function InternalHomePage() {
           <Card className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <p className="font-semibold">{org.name}</p>
-              <p className="text-sm text-[#5E6B75]">
+              <p className="text-sm text-muted">
                 {org.slug} · {userCounts.get(org.id) ?? 0} users · {receiptCounts.get(org.id) ?? 0} receipts
               </p>
             </div>
-            <Badge tone={org.status === "active" ? "success" : org.status === "deactivated" ? "alert" : "amber"}>
+            <Badge tone={org.status === "active" ? "success" : org.status === "deactivated" ? "alert" : "route"}>
               {org.status ?? "active"}
             </Badge>
           </Card>
         </Link>
       ))}
       {(imports ?? []).length ? (
-        <p className="text-sm text-[#C93C37]">{imports?.length} failed import job(s) across tenants.</p>
+        <p className="text-sm text-alert">{imports?.length} failed import job(s) across tenants.</p>
       ) : null}
     </div>
   );

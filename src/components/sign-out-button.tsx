@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { queuedCount } from "@/lib/offline/queue";
 import { signOutAction } from "@/app/(auth)/actions";
 
-export function SignOutButton() {
+export function SignOutButton({ className }: { className?: string }) {
   const [blocked, setBlocked] = useState(false);
   useEffect(() => {
     const userId = document.cookie;
@@ -25,7 +25,7 @@ export function SignOutButton() {
         await signOutAction();
       }}
     >
-      <Button type="submit" variant="ghost" size="sm">
+      <Button type="submit" variant="ghost" size="sm" className={className}>
         {blocked ? "Sign out" : "Sign out"}
       </Button>
     </form>

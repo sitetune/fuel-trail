@@ -62,7 +62,7 @@ export function TruckForm({
         </select>
         <Label htmlFor="notes">Notes</Label>
         <Input id="notes" name="notes" defaultValue={truck?.notes ?? ""} />
-        <Button type="submit" variant="amber" className="w-full">
+        <Button type="submit" variant="primary" className="w-full">
           Save truck
         </Button>
       </form>

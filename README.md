@@ -1,6 +1,8 @@
 # FuelTrail
 
-**Every gallon. Every truck. One clear trail.**
+**Smarter fuel decisions. Further.**
+
+Brand kit and UI rules: [docs/brand/style-guide.md](docs/brand/style-guide.md) (board image in the same folder).
 
 FuelTrail is a mobile-first PWA for a small trucking company. Drivers photograph diesel receipts after fueling. The original image is stored privately and never overwritten. OCR can prefill fields, but the driver must confirm values before submission. Managers work truck-first: spend, gallons, estimated fuel, exceptions, IFTA-ready fuel-purchase exports, savings observations, and fuel-stop planning.
 

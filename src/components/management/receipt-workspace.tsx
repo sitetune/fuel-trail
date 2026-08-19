@@ -128,10 +128,10 @@ export function ReceiptWorkspace({
           <ReceiptStatusBadge status={receipt.status} />
         </div>
         {receipt.amended_at ? (
-          <p className="text-sm text-[#C93C37]">Amended after appearing in a report. Regenerate the report if needed.</p>
+          <p className="text-sm text-alert">Amended after appearing in a report. Regenerate the report if needed.</p>
         ) : null}
         {receipt.ocr_confidence != null ? (
-          <p className="text-sm text-[#5E6B75]">{ocrConfidenceLabel(Number(receipt.ocr_confidence))}</p>
+          <p className="text-sm text-muted">{ocrConfidenceLabel(Number(receipt.ocr_confidence))}</p>
         ) : null}
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
@@ -180,7 +180,7 @@ export function ReceiptWorkspace({
             <Label htmlFor="merchant_name">Merchant</Label>
             <Input id="merchant_name" name="merchant_name" defaultValue={receipt.merchant_name ?? ""} />
             {extracted?.merchantName?.value && extracted.merchantName.value !== receipt.merchant_name ? (
-              <p className="text-xs text-[#5E6B75]">OCR: {extracted.merchantName.value}</p>
+              <p className="text-xs text-muted">OCR: {extracted.merchantName.value}</p>
             ) : null}
           </div>
           <div>
@@ -270,11 +270,11 @@ export function ReceiptWorkspace({
             <Textarea id="reason" name="reason" defaultValue={receipt.rejection_reason ?? ""} placeholder="Required when rejecting" />
           </div>
           {receipt.duplicate_of && !receipt.duplicate_override ? (
-            <p className="sm:col-span-2 text-sm text-[#C93C37]">Possible duplicate of another receipt.</p>
+            <p className="sm:col-span-2 text-sm text-alert">Possible duplicate of another receipt.</p>
           ) : null}
           <FieldError message={error ?? undefined} />
           {readOnly ? (
-            <p className="sm:col-span-2 text-sm text-[#5E6B75]">Auditor view is read-only. Verification and corrections require a manager.</p>
+            <p className="sm:col-span-2 text-sm text-muted">Auditor view is read-only. Verification and corrections require a manager.</p>
           ) : (
           <div className="flex flex-wrap gap-2 sm:col-span-2">
             <Button
@@ -329,7 +329,7 @@ export function ReceiptWorkspace({
               <li key={event.id}>
                 <strong>{event.event_type.replaceAll("_", " ")}</strong> · {formatReceiptDate(event.created_at)}
                 {event.field_changes ? (
-                  <pre className="mt-1 overflow-x-auto rounded bg-[#F7F8FA] p-2 text-xs">
+                  <pre className="mt-1 overflow-x-auto rounded bg-warm p-2 text-xs">
                     {JSON.stringify(event.field_changes, null, 2)}
                   </pre>
                 ) : null}

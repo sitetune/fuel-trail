@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { rethrowIfNextRedirect } from "@/lib/auth/redirect-error";
 import { AuthError, getSessionUser, redirectForUser } from "@/lib/auth/session";
 import { createOrganizationAccount, signupSchema } from "@/lib/orgs/signup";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
@@ -14,15 +15,17 @@ export async function signInAction(formData: FormData) {
   if (error) {
     redirect("/login?error=invalid");
   }
+  let user;
   try {
-    const user = await getSessionUser();
-    if (!user) redirect("/login?error=inactive");
-    redirect(redirectForUser(user));
+    user = await getSessionUser();
   } catch (error) {
+    rethrowIfNextRedirect(error);
     if (error instanceof AuthError && error.code === "pending") redirect("/waiting");
     if (error instanceof AuthError && error.code === "inactive") redirect("/login?error=inactive");
     redirect("/login?error=invalid");
   }
+  if (!user) redirect("/login?error=inactive");
+  redirect(redirectForUser(user));
 }
 
 export async function signUpAction(formData: FormData) {

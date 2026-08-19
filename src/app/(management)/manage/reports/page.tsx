@@ -115,7 +115,7 @@ export default async function ReportsPage({
         </form>
       </Card>
       <div className="flex flex-wrap gap-3">
-        <Button asChild variant="amber">
+        <Button asChild variant="primary">
           <a href={csvHref} download="fueltrail-fuel-report.csv">
             Download truck fuel CSV
           </a>
@@ -135,13 +135,13 @@ export default async function ReportsPage({
         </Button>
       </div>
       {amended > 0 ? (
-        <p className="rounded bg-[#F5A524]/20 p-3 text-sm">
+        <p className="rounded bg-route/15 p-3 text-sm">
           {amended} receipt{amended === 1 ? "" : "s"} in this view {amended === 1 ? "was" : "were"} amended after appearing in a report.
         </p>
       ) : null}
       <Card>
         <h2 className="font-semibold">Truck fuel report</h2>
-        <p className="mb-3 text-sm text-[#5E6B75]">CSV export snapshots the current filter so later edits do not silently rewrite history.</p>
+        <p className="mb-3 text-sm text-muted">CSV export snapshots the current filter so later edits do not silently rewrite history.</p>
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
             <thead>
@@ -175,7 +175,7 @@ export default async function ReportsPage({
       </Card>
       <Card>
         <h2 className="font-semibold">IFTA-ready fuel purchase worksheet</h2>
-        <p className="my-2 rounded bg-[#F5A524]/20 p-3 text-sm">{IFTA_LIMITATION_NOTE}</p>
+        <p className="my-2 rounded bg-route/15 p-3 text-sm">{IFTA_LIMITATION_NOTE}</p>
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
             <thead>

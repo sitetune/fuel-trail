@@ -88,7 +88,7 @@ export function ReceiptCapture({
       />
       {!preview ? (
         <div className="space-y-3">
-          <Button className="w-full" size="lg" variant="amber" onClick={() => inputRef.current?.click()}>
+          <Button className="w-full" size="lg" variant="primary" onClick={() => inputRef.current?.click()}>
             Open camera
           </Button>
           <Button
@@ -120,13 +120,13 @@ export function ReceiptCapture({
             >
               Retake
             </Button>
-            <Button className="flex-1" variant="amber" onClick={usePhoto} disabled={!truckId || working}>
+            <Button className="flex-1" variant="primary" onClick={usePhoto} disabled={!truckId || working}>
               {working ? "Working…" : "Use photo"}
             </Button>
           </div>
         </Card>
       )}
-      {status ? <p className="text-sm text-[#5E6B75]">{status}</p> : null}
+      {status ? <p className="text-sm text-muted">{status}</p> : null}
     </div>
   );
 }

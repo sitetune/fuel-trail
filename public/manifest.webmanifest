@@ -1,11 +1,11 @@
 {
   "name": "FuelTrail",
   "short_name": "FuelTrail",
-  "description": "Every gallon. Every truck. One clear trail.",
+  "description": "Smarter fuel decisions. Further.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#F7F8FA",
-  "theme_color": "#0B1F33",
+  "background_color": "#F6F5F1",
+  "theme_color": "#0B1728",
   "icons": [
     {
       "src": "/icons/icon.svg",

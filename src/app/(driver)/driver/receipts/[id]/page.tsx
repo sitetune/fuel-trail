@@ -36,10 +36,10 @@ export default async function DriverReceiptDetailPage({ params }: { params: Prom
         <ReceiptStatusBadge status={receipt.status} />
       </div>
       {status === "rejected" ? (
-        <Card className="border-[#C93C37] bg-[#C93C37]/5 space-y-2">
-          <p className="font-semibold text-[#C93C37]">Rejected — Action Required</p>
+        <Card className="border-alert bg-alert/5 space-y-2">
+          <p className="font-semibold text-alert">Rejected — Action Required</p>
           <p className="text-sm">{receipt.rejection_reason ?? "A manager asked you to correct this receipt."}</p>
-          <p className="text-sm text-[#5E6B75]">
+          <p className="text-sm text-muted">
             {formatReceiptDate(receipt.rejected_at)}
             {(receipt.rejector as { full_name?: string } | null)?.full_name
               ? ` · ${(receipt.rejector as { full_name?: string }).full_name}`
@@ -64,7 +64,7 @@ export default async function DriverReceiptDetailPage({ params }: { params: Prom
       </Card>
       {canEdit ? (
         <div className="flex flex-col gap-2">
-          <Button asChild variant="amber" className="w-full">
+          <Button asChild variant="primary" className="w-full">
             <Link href={`/driver/receipts/${receipt.id}/review`}>Correct information</Link>
           </Button>
           {canReplace ? (
@@ -74,7 +74,7 @@ export default async function DriverReceiptDetailPage({ params }: { params: Prom
           ) : null}
         </div>
       ) : (
-        <p className="text-sm text-[#5E6B75]">Verified receipts can only be changed by a manager.</p>
+        <p className="text-sm text-muted">Verified receipts can only be changed by a manager.</p>
       )}
       <Card>
         <h2 className="font-semibold">Review history</h2>

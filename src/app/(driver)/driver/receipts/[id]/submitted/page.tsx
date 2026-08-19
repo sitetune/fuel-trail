@@ -21,8 +21,8 @@ export default async function SubmittedPage({ params }: { params: Promise<{ id: 
       <p className="text-lg">
         Truck {(Array.isArray(receipt.trucks) ? receipt.trucks[0] : receipt.trucks)?.unit_number} · {receipt.gallons} gallons
       </p>
-      <p className="text-sm text-[#5E6B75]">Status: {receipt.status.replace("_", " ")}</p>
-      <Button asChild variant="amber" className="w-full">
+      <p className="text-sm text-muted">Status: {receipt.status.replace("_", " ")}</p>
+      <Button asChild variant="primary" className="w-full">
         <Link href={`/driver/receipts/${id}`}>View receipt</Link>
       </Button>
       <Button asChild variant="outline" className="w-full">

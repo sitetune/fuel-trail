@@ -31,21 +31,21 @@ export default async function InternalOrgPage({
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-semibold">{org.name}</h1>
-        <p className="text-sm text-[#5E6B75]">
+        <p className="text-sm text-muted">
           Status {org.status ?? "active"} · {users ?? 0} users · {receipts ?? 0} receipts
         </p>
       </div>
       <div className="grid gap-3 sm:grid-cols-3">
         <Card>
-          <p className="text-sm text-[#5E6B75]">Failed imports</p>
+          <p className="text-sm text-muted">Failed imports</p>
           <p className="text-2xl font-semibold">{failedImports ?? 0}</p>
         </Card>
         <Card>
-          <p className="text-sm text-[#5E6B75]">Notification failures</p>
+          <p className="text-sm text-muted">Notification failures</p>
           <p className="text-2xl font-semibold">{failedNotes ?? 0}</p>
         </Card>
         <Card>
-          <p className="text-sm text-[#5E6B75]">Created</p>
+          <p className="text-sm text-muted">Created</p>
           <p className="text-2xl font-semibold">{new Date(org.created_at).toLocaleDateString()}</p>
         </Card>
       </div>
@@ -63,11 +63,11 @@ export default async function InternalOrgPage({
       </Card>
       <Card className="space-y-3">
         <h2 className="font-semibold">Time-limited support access</h2>
-        <p className="text-sm text-[#5E6B75]">
+        <p className="text-sm text-muted">
           This records that you reviewed tenant metadata. It does not sign you in as a customer user.
         </p>
-        {query.error === "reason" ? <p className="text-[#C93C37]">Enter a reason of at least 8 characters.</p> : null}
-        {query.granted ? <p className="text-[#198754]">Support access recorded.</p> : null}
+        {query.error === "reason" ? <p className="text-alert">Enter a reason of at least 8 characters.</p> : null}
+        {query.granted ? <p className="text-success">Support access recorded.</p> : null}
         <form action={grantSupportAccessAction} className="space-y-3">
           <input type="hidden" name="organizationId" value={org.id} />
           <Label htmlFor="reason">Reason</Label>
@@ -78,7 +78,7 @@ export default async function InternalOrgPage({
             Record support access
           </Button>
         </form>
-        <ul className="text-sm text-[#5E6B75]">
+        <ul className="text-sm text-muted">
           {(grants ?? []).map((grant) => (
             <li key={grant.id}>
               {grant.actor_email} · {grant.reason} · until {new Date(grant.ends_at).toLocaleString()}

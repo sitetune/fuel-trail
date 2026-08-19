@@ -1,19 +1,17 @@
 import type { ReactNode } from "react";
-import Link from "next/link";
 import { redirect } from "next/navigation";
-import { BrandLockup } from "@/components/brand-lockup";
 import { OfflineBadge } from "@/components/offline-badge";
 import { ServiceWorkerRegister } from "@/components/service-worker-register";
-import { SignOutButton } from "@/components/sign-out-button";
 import { NotificationBell } from "@/components/notifications/notification-bell";
+import { ManageSidebar } from "@/components/shell/manage-sidebar";
 import { AuthError, requireManagement } from "@/lib/auth/session";
 import { isPlatformAdminEmail } from "@/lib/orgs/status";
 import { notifyAgingReceipts } from "@/lib/notifications";
 
 const links = [
-  { href: "/manage", label: "Fleet" },
-  { href: "/manage/trucks", label: "Trucks" },
+  { href: "/manage", label: "Dashboard" },
   { href: "/manage/receipts", label: "Receipts" },
+  { href: "/manage/trucks", label: "Trucks" },
   { href: "/manage/reports", label: "Reports" },
   { href: "/manage/savings", label: "Savings" },
   { href: "/manage/import", label: "Import" },
@@ -22,6 +20,7 @@ const links = [
   { href: "/manage/stations", label: "Stations" },
   { href: "/manage/users", label: "Users" },
   { href: "/manage/audit", label: "Audit" },
+  { href: "/manage/notifications", label: "Alerts" },
   { href: "/manage/settings", label: "Settings" },
 ];
 
@@ -41,33 +40,23 @@ export default async function ManageLayout({ children }: { children: ReactNode }
     ? [...links, { href: "/internal", label: "Admin" }]
     : links;
   return (
-    <div className="min-h-screen">
+    <div className="min-h-[100dvh] bg-warm lg:flex">
       <ServiceWorkerRegister />
       <OfflineBadge />
-      <header className="border-b border-[#5E6B75]/20 bg-white">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3">
-          <BrandLockup href="/manage" logoUrl={user.organization.logo_path ? "/api/org/logo" : null} />
-          <div className="flex items-center gap-2">
-            <NotificationBell user={user} href="/manage/notifications" />
-            <SignOutButton />
-          </div>
+      <ManageSidebar
+        links={nav}
+        logoUrl={user.organization.logo_path ? "/api/org/logo" : null}
+        auditor={user.profile.role === "auditor"}
+        userLabel={user.profile.full_name ?? user.profile.email}
+      />
+      <div className="min-w-0 flex-1">
+        <div className="hidden h-14 items-center justify-end border-b border-steel/25 bg-white px-6 lg:flex">
+          <NotificationBell user={user} href="/manage/notifications" />
         </div>
-        <nav className="mx-auto flex max-w-7xl gap-1 overflow-x-auto px-4 pb-2">
-          {nav.map((link) => (
-          <Link
-            key={link.href}
-            href={link.href}
-            className="inline-flex min-h-11 shrink-0 items-center rounded-md px-3 py-2 text-sm font-medium text-[#0B1F33] hover:bg-[#F7F8FA]"
-          >
-              {link.label}
-            </Link>
-          ))}
-        </nav>
-        {user.profile.role === "auditor" ? (
-          <p className="mx-auto max-w-7xl px-4 pb-2 text-sm text-[#5E6B75]">Read-only auditor access. You can review data but cannot change receipts, fleet, or settings.</p>
-        ) : null}
-      </header>
-      <main className="mx-auto max-w-7xl px-4 py-6">{children}</main>
+        <main id="main" className="mx-auto w-full max-w-[1400px] px-4 py-6 lg:px-8">
+          {children}
+        </main>
+      </div>
     </div>
   );
 }

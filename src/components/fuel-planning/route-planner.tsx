@@ -77,7 +77,7 @@ export function RoutePlanner({
           <input type="checkbox" name="issueToDriver" className="h-5 w-5" />
           Issue to driver
         </label>
-        <Button type="submit" variant="amber" className="w-full">
+        <Button type="submit" variant="primary" className="w-full">
           Rank fuel stops
         </Button>
       </form>

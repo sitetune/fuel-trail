@@ -21,7 +21,7 @@ export default async function ImportCenterPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-semibold">Import Center</h1>
-        <p className="text-sm text-[#5E6B75]">
+        <p className="text-sm text-muted">
           Start with a downloadable CSV template. Import trucks and drivers here; station prices also live on Stations.
         </p>
       </div>

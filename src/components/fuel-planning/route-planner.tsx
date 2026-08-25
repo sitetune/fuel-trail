@@ -6,12 +6,18 @@ import { Card } from "@/components/ui/card";
 import { Input, Label } from "@/components/ui/input";
 import { IssuePlanButton } from "@/components/fuel-planning/issue-plan-button";
 
+export type PlannerPlace = { name: string; lat: number; lng: number };
+
 export function RoutePlanner({
   trucks,
   assignedTruckIds,
+  origin,
+  destination,
 }: {
   trucks: Array<{ id: string; unit_number: string }>;
   assignedTruckIds: string[];
+  origin: PlannerPlace;
+  destination: PlannerPlace;
 }) {
   const [result, setResult] = useState<string>("");
   const [planId, setPlanId] = useState<string | null>(null);
@@ -36,10 +42,10 @@ export function RoutePlanner({
               truckId: selectedTruckId,
               originText: form.get("originText"),
               destinationText: form.get("destinationText"),
-              originLat: form.get("originLat") ? Number(form.get("originLat")) : undefined,
-              originLng: form.get("originLng") ? Number(form.get("originLng")) : undefined,
-              destinationLat: form.get("destinationLat") ? Number(form.get("destinationLat")) : undefined,
-              destinationLng: form.get("destinationLng") ? Number(form.get("destinationLng")) : undefined,
+              originLat: origin.lat,
+              originLng: origin.lng,
+              destinationLat: destination.lat,
+              destinationLng: destination.lng,
               currentEstimatedGallons: form.get("currentEstimatedGallons")
                 ? Number(form.get("currentEstimatedGallons"))
                 : undefined,
@@ -68,7 +74,7 @@ export function RoutePlanner({
         <select
           id="truckId"
           name="truckId"
-          className="h-11 w-full rounded-md border px-3"
+          className="h-11 w-full rounded-md border border-steel/50 bg-white px-3"
           required
           defaultValue={truckId}
         >
@@ -79,15 +85,12 @@ export function RoutePlanner({
           ))}
         </select>
         <Label htmlFor="originText">Origin</Label>
-        <Input id="originText" name="originText" defaultValue="Baytown, TX" required />
+        <Input id="originText" name="originText" value={origin.name} readOnly />
         <Label htmlFor="destinationText">Destination</Label>
-        <Input id="destinationText" name="destinationText" defaultValue="Conroe, TX" required />
-        <div className="grid grid-cols-2 gap-2">
-          <Input name="originLat" placeholder="Origin lat" defaultValue="29.7355" />
-          <Input name="originLng" placeholder="Origin lng" defaultValue="-94.9774" />
-          <Input name="destinationLat" placeholder="Dest lat" defaultValue="30.3119" />
-          <Input name="destinationLng" placeholder="Dest lng" defaultValue="-95.4561" />
-        </div>
+        <Input id="destinationText" name="destinationText" value={destination.name} readOnly />
+        <p className="text-xs text-muted">
+          Pick both points on the map. Ranking still uses your imported station prices when a stop matches.
+        </p>
         <Input name="currentEstimatedGallons" placeholder="Estimated gallons override" />
         <label className="flex min-h-11 items-center gap-2">
           <input type="checkbox" name="trailerAttached" defaultChecked className="h-5 w-5" />

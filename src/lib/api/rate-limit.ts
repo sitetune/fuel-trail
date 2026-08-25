@@ -6,6 +6,7 @@ const LIMITS: Record<string, { windowSeconds: number; max: number }> = {
   route: { windowSeconds: 60, max: 10 },
   invite: { windowSeconds: 3600, max: 20 },
   upload: { windowSeconds: 60, max: 12 },
+  fuelStops: { windowSeconds: 60, max: 20 },
 };
 
 export async function enforceRateLimit(input: {

@@ -93,7 +93,7 @@ export default async function ManageDashboardPage() {
         <Badge tone="alert">{needsReview} receipts needing review</Badge>
         <Badge tone="route">{duplicates} suspected duplicates</Badge>
         <Link className="text-sm font-medium text-route" href="/manage/receipts">
-          Open Receipt Center
+          Open receipts
         </Link>
       </div>
       <div className="grid gap-3 md:hidden">

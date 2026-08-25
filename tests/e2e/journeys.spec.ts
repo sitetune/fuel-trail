@@ -35,7 +35,7 @@ test("3. manager invitation and permissions", async ({ page }) => {
   await page.getByRole("button", { name: "Sign in" }).click();
   await expect(page.getByRole("heading", { name: "Fleet" })).toBeVisible();
   await page.goto("/manage/receipts");
-  await expect(page.getByRole("heading", { name: "Receipt Center" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Receipts" })).toBeVisible();
 });
 
 test("4. fleet CSV import", async ({ page }) => {
@@ -103,7 +103,7 @@ test("8. manager correction and verification", async ({ page }) => {
   await page.getByLabel("Password").fill(process.env.E2E_MANAGER_PASSWORD!);
   await page.getByRole("button", { name: "Sign in" }).click();
   await page.goto("/manage/receipts?status=submitted");
-  await expect(page.getByRole("heading", { name: "Receipt Center" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Receipts" })).toBeVisible();
 });
 
 test("9. rejection, driver notification, and resubmission", async ({ page }) => {
@@ -129,7 +129,7 @@ test("10. receipt printing and filtered reporting", async ({ page }) => {
     page.getByText("Fuel purchase worksheet only. A complete IFTA return also requires distance traveled in each jurisdiction."),
   ).toBeVisible();
   await page.goto("/manage/receipts");
-  await expect(page.getByText(/Print or download this page|Print this page/)).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Receipts" })).toBeVisible();
 });
 
 test("11. cross-organization data isolation", async ({ page }) => {

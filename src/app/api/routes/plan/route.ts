@@ -6,6 +6,7 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { getFuelRouteProvider, rankRouteCandidates } from "@/lib/routing";
 import { haversineMiles } from "@/lib/routing/manual";
 import { issueRoutePlanToDriver } from "@/lib/routing/issue-plan";
+import { geocodePlace } from "@/lib/routing/osm-stops";
 import type { RouteStation } from "@/lib/routing/types";
 
 const bodySchema = z.object({
@@ -105,15 +106,33 @@ export async function POST(request: Request) {
     });
 
     const notices: string[] = [];
+    let originLat = body.originLat;
+    let originLng = body.originLng;
+    let destinationLat = body.destinationLat;
+    let destinationLng = body.destinationLng;
+    if (originLat == null || originLng == null) {
+      const place = await geocodePlace(body.originText);
+      if (place) {
+        originLat = place.lat;
+        originLng = place.lng;
+      }
+    }
+    if (destinationLat == null || destinationLng == null) {
+      const place = await geocodePlace(body.destinationText);
+      if (place) {
+        destinationLat = place.lat;
+        destinationLng = place.lng;
+      }
+    }
     let route;
     try {
       route = await provider.getTruckRoute({
         originText: body.originText,
         destinationText: body.destinationText,
-        originLat: body.originLat,
-        originLng: body.originLng,
-        destinationLat: body.destinationLat,
-        destinationLng: body.destinationLng,
+        originLat,
+        originLng,
+        destinationLat,
+        destinationLng,
         departureAt: body.departureAt,
       });
     } catch (error) {

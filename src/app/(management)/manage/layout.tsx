@@ -17,7 +17,6 @@ const links = [
   { href: "/manage/import", label: "Import" },
   { href: "/manage/setup", label: "Setup" },
   { href: "/manage/routes", label: "Fuel stops" },
-  { href: "/manage/stations", label: "Stations" },
   { href: "/manage/users", label: "Users" },
   { href: "/manage/notifications", label: "Alerts" },
   { href: "/manage/settings", label: "Settings" },

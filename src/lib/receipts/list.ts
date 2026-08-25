@@ -18,6 +18,21 @@ export type ReceiptCenterFilters = {
 
 export const RECEIPT_PAGE_SIZE = 25;
 
+export function receiptFiltersAreActive(filters: ReceiptCenterFilters) {
+  return Boolean(
+    filters.status ||
+      filters.truckId ||
+      filters.driverId ||
+      filters.merchant ||
+      filters.region ||
+      filters.q ||
+      filters.from ||
+      filters.to ||
+      filters.ocr ||
+      filters.report,
+  );
+}
+
 const SORTS = new Set(["purchased_at", "submitted_at", "total_amount", "gallons", "status"]);
 
 export function parseReceiptCenterFilters(params: Record<string, string | undefined>): ReceiptCenterFilters {

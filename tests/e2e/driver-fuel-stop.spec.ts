@@ -13,6 +13,7 @@ test("driver fuel stop is prominent with directions", async ({ page }) => {
   await page.waitForURL(/\/driver/, { timeout: 20_000 });
 
   await expect(page.getByText("Assigned fuel stop").first()).toBeVisible({ timeout: 10_000 });
+  await expect(page.getByText(/Katy|Pederson|Interstate|I-\d+|US-\d+|Exit |Baytown|Humble|Conroe/i).first()).toBeVisible();
   await expect(page.getByRole("link", { name: "Get directions" })).toBeVisible();
   await expect(page.getByRole("link", { name: "Google Maps" })).toBeVisible();
   await expect(page.getByRole("link", { name: "Apple Maps" })).toBeVisible();

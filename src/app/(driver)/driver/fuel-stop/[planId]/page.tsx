@@ -4,7 +4,7 @@ import { FuelStopAssignment } from "@/components/driver/fuel-stop-assignment";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { requireSession } from "@/lib/auth/session";
-import { DRIVER_FUEL_STOP_SELECT, resolveDriverFuelStop } from "@/lib/routing/driver-stop";
+import { DRIVER_FUEL_STOP_SELECT, enrichDriverFuelStop, resolveDriverFuelStop } from "@/lib/routing/driver-stop";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 export default async function DriverFuelStopPage({ params }: { params: Promise<{ planId: string }> }) {
@@ -20,7 +20,9 @@ export default async function DriverFuelStopPage({ params }: { params: Promise<{
     .maybeSingle();
   if (!plan) notFound();
 
-  const stop = resolveDriverFuelStop(plan as import("@/lib/routing/driver-stop").DriverFuelStopPlan);
+  const stop = await enrichDriverFuelStop(
+    resolveDriverFuelStop(plan as import("@/lib/routing/driver-stop").DriverFuelStopPlan),
+  );
 
   return (
     <div className="space-y-4">

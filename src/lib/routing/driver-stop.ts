@@ -1,3 +1,6 @@
+import { buildStopLocationHint } from "@/lib/routing/location-hint";
+import { reverseGeocodePlace } from "@/lib/routing/osm-stops";
+
 export const DRIVER_FUEL_STOP_SELECT =
   "id, origin_text, destination_text, origin_latitude, origin_longitude, destination_latitude, destination_longitude, recommended_purchase_gallons, trailer_attached, recommendation_explanation, fuel_stations:recommended_station_id(name, address, city, region, postal_code, latitude, longitude, truck_access, parking_available, trailer_policy, manager_notes)";
 
@@ -33,6 +36,7 @@ export type DriverFuelStopView = {
   planId: string;
   name: string;
   addressLine: string | null;
+  highwayLine: string | null;
   locality: string | null;
   lat: number | null;
   lng: number | null;
@@ -71,6 +75,24 @@ function explanationFromJson(value: unknown): string | null {
   return null;
 }
 
+function withLocationHint(
+  stop: Omit<DriverFuelStopView, "highwayLine"> & { highwayLine?: string | null },
+  reverse?: Parameters<typeof buildStopLocationHint>[0]["reverse"],
+): DriverFuelStopView {
+  const hint = buildStopLocationHint({
+    name: stop.name,
+    addressLine: stop.addressLine,
+    locality: stop.locality,
+    reverse,
+  });
+  return {
+    ...stop,
+    addressLine: hint.addressLine,
+    highwayLine: hint.highwayLine,
+    locality: hint.locality,
+  };
+}
+
 export function resolveDriverFuelStop(plan: DriverFuelStopPlan): DriverFuelStopView {
   const station = stationOf(plan);
   const stationLat = coord(station?.latitude);
@@ -82,7 +104,7 @@ export function resolveDriverFuelStop(plan: DriverFuelStopPlan): DriverFuelStopV
   const gallons = coord(plan.recommended_purchase_gallons);
 
   if (station && stationLat != null && stationLng != null) {
-    return {
+    return withLocationHint({
       planId: plan.id,
       name: station.name?.trim() || plan.destination_text,
       addressLine: station.address,
@@ -99,11 +121,11 @@ export function resolveDriverFuelStop(plan: DriverFuelStopPlan): DriverFuelStopV
       managerNotes: station.manager_notes,
       explanation: explanationFromJson(plan.recommendation_explanation),
       source: "station",
-    };
+    });
   }
 
   const useDestination = destLat != null && destLng != null;
-  return {
+  return withLocationHint({
     planId: plan.id,
     name: (useDestination ? plan.destination_text : plan.origin_text).trim() || "Assigned stop",
     addressLine: null,
@@ -120,7 +142,19 @@ export function resolveDriverFuelStop(plan: DriverFuelStopPlan): DriverFuelStopV
     managerNotes: station?.manager_notes ?? null,
     explanation: explanationFromJson(plan.recommendation_explanation),
     source: useDestination ? "destination" : "origin",
-  };
+  });
+}
+
+export async function enrichDriverFuelStop(stop: DriverFuelStopView): Promise<DriverFuelStopView> {
+  if (stop.addressLine && stop.locality) return stop;
+  if (stop.lat == null || stop.lng == null) return stop;
+  try {
+    const reverse = await reverseGeocodePlace(stop.lat, stop.lng);
+    if (!reverse) return stop;
+    return withLocationHint(stop, reverse);
+  } catch {
+    return stop;
+  }
 }
 
 export function driverFuelStopHref(planId: string) {
@@ -130,6 +164,7 @@ export function driverFuelStopHref(planId: string) {
 export function driverFuelStopNotificationBody(stop: DriverFuelStopView) {
   const gallons =
     stop.gallons != null ? `Buy about ${Math.round(stop.gallons)} gal.` : "Fuel there if you need it.";
-  const place = [stop.name, stop.locality].filter(Boolean).join(", ");
+  const where = [stop.addressLine, stop.highwayLine, stop.locality].filter(Boolean).join(", ");
+  const place = where ? `${stop.name} (${where})` : stop.name;
   return `Stop at ${place}. ${gallons} Route: ${stop.originText} → ${stop.destinationText}. You make the final safety decision.`;
 }

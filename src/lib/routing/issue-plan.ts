@@ -3,6 +3,7 @@ import {
   DRIVER_FUEL_STOP_SELECT,
   driverFuelStopHref,
   driverFuelStopNotificationBody,
+  enrichDriverFuelStop,
   resolveDriverFuelStop,
   type DriverFuelStopPlan,
 } from "@/lib/routing/driver-stop";
@@ -25,7 +26,7 @@ export async function notifyDriverOfFuelStop(input: {
     .eq("organization_id", input.user.organization.id)
     .maybeSingle();
   if (!plan) return { notified: false, reason: "Plan not found." };
-  const stop = resolveDriverFuelStop(plan as DriverFuelStopPlan);
+  const stop = await enrichDriverFuelStop(resolveDriverFuelStop(plan as DriverFuelStopPlan));
   await notify({
     organizationId: input.user.organization.id,
     recipientIds: [input.driverId],

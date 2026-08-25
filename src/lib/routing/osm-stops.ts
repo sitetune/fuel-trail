@@ -1,4 +1,5 @@
 import { haversineMiles } from "@/lib/routing/manual";
+import { parseHighwayRef } from "@/lib/routing/location-hint";
 
 export type MappedFuelStop = {
   id: string;
@@ -28,6 +29,79 @@ type OverpassElement = {
 
 const TRUCK_NAME =
   /\b(pilot|love'?s|loves travel|travelcenters|flying j|ta\b|petro|amaze|speedway|kwik trip|road ranger)\b/i;
+
+type ReversePlace = {
+  displayName: string | null;
+  houseNumber: string | null;
+  road: string | null;
+  suburb: string | null;
+  neighbourhood: string | null;
+  city: string | null;
+  state: string | null;
+  postcode: string | null;
+};
+
+const reverseCache = new Map<string, ReversePlace | null>();
+
+async function reverseAtZoom(lat: number, lng: number, zoom: number): Promise<ReversePlace | null> {
+  const url = new URL("https://nominatim.openstreetmap.org/reverse");
+  url.searchParams.set("format", "json");
+  url.searchParams.set("lat", String(lat));
+  url.searchParams.set("lon", String(lng));
+  url.searchParams.set("zoom", String(zoom));
+  url.searchParams.set("addressdetails", "1");
+  const response = await nominatimGet(url);
+  if (!response.ok) return null;
+  const json = (await response.json()) as {
+    display_name?: string;
+    address?: {
+      house_number?: string;
+      road?: string;
+      suburb?: string;
+      neighbourhood?: string;
+      city?: string;
+      town?: string;
+      village?: string;
+      hamlet?: string;
+      state?: string;
+      postcode?: string;
+    };
+  };
+  const address = json.address;
+  return {
+    displayName: json.display_name ?? null,
+    houseNumber: address?.house_number ?? null,
+    road: address?.road ?? null,
+    suburb: address?.suburb ?? null,
+    neighbourhood: address?.neighbourhood ?? null,
+    city: address?.city ?? address?.town ?? address?.village ?? address?.hamlet ?? null,
+    state: address?.state ?? null,
+    postcode: address?.postcode ?? null,
+  };
+}
+
+export async function reverseGeocodePlace(lat: number, lng: number): Promise<ReversePlace | null> {
+  const key = `${lat.toFixed(4)},${lng.toFixed(4)}`;
+  if (reverseCache.has(key)) return reverseCache.get(key) ?? null;
+  const street = await reverseAtZoom(lat, lng, 18);
+  if (!street) {
+    reverseCache.set(key, null);
+    return null;
+  }
+  const haystack = [street.displayName, street.road].filter(Boolean).join(" ");
+  if (!parseHighwayRef(haystack)) {
+    const area = await reverseAtZoom(lat, lng, 14);
+    if (area?.road || area?.displayName) {
+      street.displayName = [street.displayName, area.displayName].filter(Boolean).join(" · ");
+      if (area.road && parseHighwayRef(area.road) && !street.road) street.road = area.road;
+      else if (area.road && parseHighwayRef(area.road)) {
+        street.displayName = `${street.displayName} · ${area.road}`;
+      }
+    }
+  }
+  reverseCache.set(key, street);
+  return street;
+}
 
 const geocodeCache = new Map<string, { lat: number; lng: number; label: string }>();
 let lastNominatimAt = 0;

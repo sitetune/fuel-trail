@@ -1,14 +1,29 @@
 import Link from "next/link";
-import { GasPump } from "@phosphor-icons/react/ssr";
+import { GasPump, MapPin } from "@phosphor-icons/react/ssr";
 import { Button } from "@/components/ui/button";
 import { DirectionsActions } from "@/components/driver/directions-actions";
 import { driverFuelStopHref, type DriverFuelStopView } from "@/lib/routing/driver-stop";
-import { formatGallons } from "@/lib/utils";
+import { formatGallons, cn } from "@/lib/utils";
 
 function trailerLabel(stop: DriverFuelStopView) {
   if (stop.trailerPolicy === "drop_required") return "Drop required before fueling";
   if (stop.trailerPolicy === "stay_attached" || stop.trailerAttached) return "Trailer can stay attached";
   return null;
+}
+
+function StopWhereabouts({ stop, tone }: { stop: DriverFuelStopView; tone: "dark" | "light" }) {
+  const lines = [stop.addressLine, stop.highwayLine, stop.locality].filter(Boolean);
+  if (lines.length === 0) return null;
+  return (
+    <div className={cn("mt-2 flex items-start gap-2", tone === "dark" ? "text-white/85" : "text-ink")}>
+      <MapPin size={18} className={cn("mt-0.5 shrink-0", tone === "dark" ? "text-sky" : "text-route")} />
+      <div className="min-w-0 text-[15px] leading-snug">
+        {lines.map((line) => (
+          <p key={line}>{line}</p>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 export function FuelStopAssignment({
@@ -32,8 +47,7 @@ export function FuelStopAssignment({
           <div className="min-w-0">
             <p className="text-xs font-semibold uppercase tracking-wide text-sky">Assigned fuel stop</p>
             <h2 className="font-display text-2xl font-semibold tracking-tight text-pretty">{stop.name}</h2>
-            {stop.addressLine ? <p className="text-sm text-steel">{stop.addressLine}</p> : null}
-            {stop.locality ? <p className="text-sm text-steel">{stop.locality}</p> : null}
+            <StopWhereabouts stop={stop} tone="dark" />
           </div>
         </div>
         {gallons ? (
@@ -62,8 +76,7 @@ export function FuelStopAssignment({
       <div className="space-y-1">
         <p className="text-xs font-semibold uppercase tracking-wide text-route">Assigned fuel stop</p>
         <h1 className="font-display text-3xl font-semibold tracking-tight text-pretty">{stop.name}</h1>
-        {stop.addressLine ? <p className="text-muted">{stop.addressLine}</p> : null}
-        {stop.locality ? <p className="text-muted">{stop.locality}</p> : null}
+        <StopWhereabouts stop={stop} tone="light" />
       </div>
       {gallons ? (
         <p className="font-display text-2xl font-semibold tabular-nums">Buy {gallons}</p>

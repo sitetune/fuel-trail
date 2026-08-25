@@ -35,7 +35,9 @@ describe("resolveDriverFuelStop", () => {
     });
     expect(stop.source).toBe("station");
     expect(stop.name).toBe("Pilot Travel Center Baytown");
+    expect(stop.addressLine).toBe("550 Interstate 10");
     expect(stop.locality).toBe("Baytown, TX");
+    expect(stop.highwayLine).toBeNull();
     expect(stop.lat).toBe(29.7355);
     expect(stop.gallons).toBe(115);
   });

@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { requireSession } from "@/lib/auth/session";
-import { DRIVER_FUEL_STOP_SELECT, resolveDriverFuelStop } from "@/lib/routing/driver-stop";
+import { DRIVER_FUEL_STOP_SELECT, enrichDriverFuelStop, resolveDriverFuelStop } from "@/lib/routing/driver-stop";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { QueueStatus } from "@/components/driver/queue-status";
 import { formatUsd } from "@/lib/utils";
@@ -49,7 +49,9 @@ export default async function DriverHomePage() {
         .maybeSingle()
     : { data: null };
   const assignedStop = plan
-    ? resolveDriverFuelStop(plan as import("@/lib/routing/driver-stop").DriverFuelStopPlan)
+    ? await enrichDriverFuelStop(
+        resolveDriverFuelStop(plan as import("@/lib/routing/driver-stop").DriverFuelStopPlan),
+      )
     : null;
 
   return (

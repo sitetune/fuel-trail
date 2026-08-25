@@ -12,7 +12,7 @@ export default async function DriverNotificationsPage() {
   const [{ data }, { data: prefs }] = await Promise.all([
     supabase
       .from("notifications")
-      .select("id, title, body, href, event_type, read_at, created_at")
+      .select("id, title, body, href, event_type, entity_id, read_at, created_at")
       .eq("recipient_id", user.authUserId)
       .order("created_at", { ascending: false })
       .limit(100),

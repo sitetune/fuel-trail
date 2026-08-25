@@ -2,10 +2,12 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { FileDashed } from "@phosphor-icons/react/ssr";
 import { EstimatedFuelGauge } from "@/components/estimated-fuel-gauge";
+import { FuelStopAssignment } from "@/components/driver/fuel-stop-assignment";
 import { Badge } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { requireSession } from "@/lib/auth/session";
+import { DRIVER_FUEL_STOP_SELECT, resolveDriverFuelStop } from "@/lib/routing/driver-stop";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { QueueStatus } from "@/components/driver/queue-status";
 import { formatUsd } from "@/lib/utils";
@@ -39,16 +41,20 @@ export default async function DriverHomePage() {
   const { data: plan } = truck
     ? await supabase
         .from("route_plans")
-        .select("*, fuel_stations:recommended_station_id(name)")
+        .select(DRIVER_FUEL_STOP_SELECT)
         .eq("truck_id", truck.id)
         .eq("status", "issued")
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle()
     : { data: null };
+  const assignedStop = plan
+    ? resolveDriverFuelStop(plan as import("@/lib/routing/driver-stop").DriverFuelStopPlan)
+    : null;
 
   return (
     <div className="space-y-4">
+      {assignedStop ? <FuelStopAssignment stop={assignedStop} variant="banner" /> : null}
       <Card className="space-y-4 p-5">
         <div className="flex items-start gap-3">
           <span className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-route/10 text-route">
@@ -78,16 +84,6 @@ export default async function DriverHomePage() {
             reserveGallons={Number(truck.reserve_gallons)}
             weekStartMinGallons={Number(truck.week_start_min_gallons)}
           />
-        </Card>
-      ) : null}
-      {plan ? (
-        <Card>
-          <p className="text-sm font-semibold">Manager fuel-stop recommendation</p>
-          <p className="mt-1 font-display text-lg font-semibold">
-            {(plan.fuel_stations as { name?: string } | null)?.name ?? "See issued plan"} · buy{" "}
-            {plan.recommended_purchase_gallons ?? "—"} gal
-          </p>
-          <p className="text-sm text-muted">You make the final safety decision.</p>
         </Card>
       ) : null}
       <QueueStatus userId={user.authUserId} />

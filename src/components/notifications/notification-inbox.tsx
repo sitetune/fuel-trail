@@ -11,6 +11,7 @@ export type NotificationRow = {
   body: string;
   href: string | null;
   event_type: string;
+  entity_id?: string | null;
   read_at: string | null;
   created_at: string;
 };
@@ -37,25 +38,43 @@ export function NotificationInbox({ notifications }: { notifications: Notificati
       <Button type="button" variant="outline" onClick={() => mark()}>
         Mark all as read
       </Button>
-      {rows.map((row) => (
-        <Card key={row.id} className={row.read_at ? "opacity-70" : ""}>
-          <p className="font-semibold">{row.title}</p>
-          <p className="text-sm text-muted">{row.body}</p>
-          <p className="mt-1 text-xs text-muted">{new Date(row.created_at).toLocaleString()}</p>
-          <div className="mt-2 flex flex-wrap gap-2">
-            {row.href ? (
-              <Button asChild size="sm" variant="primary">
-                <Link href={row.href}>Open</Link>
-              </Button>
+      {rows.map((row) => {
+        const fuelStop = row.event_type === "fuel_stop_issued";
+        const href = fuelStop && row.entity_id ? `/driver/fuel-stop/${row.entity_id}` : row.href;
+        return (
+          <Card
+            key={row.id}
+            className={fuelStop ? "border-route/40 bg-ink p-5 text-white" : row.read_at ? "opacity-70" : ""}
+          >
+            {fuelStop ? (
+              <p className="text-xs font-semibold uppercase tracking-wide text-sky">Assigned fuel stop</p>
             ) : null}
-            {!row.read_at ? (
-              <Button type="button" size="sm" variant="outline" onClick={() => mark([row.id])}>
-                Mark read
-              </Button>
-            ) : null}
-          </div>
-        </Card>
-      ))}
+            <p className="font-semibold">{row.title}</p>
+            <p className={fuelStop ? "text-sm text-steel" : "text-sm text-muted"}>{row.body}</p>
+            <p className={fuelStop ? "mt-1 text-xs text-steel" : "mt-1 text-xs text-muted"}>
+              {new Date(row.created_at).toLocaleString()}
+            </p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {href ? (
+                <Button asChild size={fuelStop ? "lg" : "sm"} variant="primary" className={fuelStop ? "w-full" : ""}>
+                  <Link href={href}>{fuelStop ? "View stop & get directions" : "Open"}</Link>
+                </Button>
+              ) : null}
+              {!row.read_at ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className={fuelStop ? "w-full border-white/30 bg-transparent text-white hover:bg-white/10" : ""}
+                  onClick={() => mark([row.id])}
+                >
+                  Mark read
+                </Button>
+              ) : null}
+            </div>
+          </Card>
+        );
+      })}
     </div>
   );
 }

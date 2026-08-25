@@ -104,3 +104,53 @@ export function previousIftaQuarter(timezone: string, at = new Date()) {
 export function hoursBetween(later: Date, earlier: Date): number {
   return (later.getTime() - earlier.getTime()) / (1000 * 60 * 60);
 }
+
+const WEEKDAYS_SUN0 = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
+
+export type FuelPeriod = "week" | "month" | "year";
+
+export function weekdaySun0InTimezone(value: Date, timezone: string): number {
+  const label = new Intl.DateTimeFormat("en-US", { timeZone: timezone, weekday: "short" }).format(value);
+  const index = WEEKDAYS_SUN0.indexOf(label as (typeof WEEKDAYS_SUN0)[number]);
+  return index === -1 ? 0 : index;
+}
+
+/** Sunday 00:00 in the organization timezone. */
+export function startOfWeekSunday(value: Date, timezone: string): Date {
+  const { year, month, day } = dateParts(value, timezone);
+  const noon = fromZonedDateTime(year, month, day, 12, 0, 0, timezone);
+  const dow = weekdaySun0InTimezone(noon, timezone);
+  return fromZonedDateTime(year, month, day - dow, 0, 0, 0, timezone);
+}
+
+export function periodKeyInTimezone(value: Date, timezone: string, period: FuelPeriod): string {
+  if (period === "year") return String(dateParts(value, timezone).year);
+  if (period === "month") return monthKeyInTimezone(value, timezone);
+  return isoDateInTimezone(startOfWeekSunday(value, timezone), timezone);
+}
+
+export function periodLabelInTimezone(key: string, period: FuelPeriod, timezone: string): string {
+  if (period === "year") return key;
+  if (period === "month") {
+    const [year, month] = key.split("-").map(Number);
+    return new Intl.DateTimeFormat("en-US", { month: "short", year: "numeric", timeZone: timezone }).format(
+      fromZonedDateTime(year, month, 1, 12, 0, 0, timezone),
+    );
+  }
+  const [year, month, day] = key.split("-").map(Number);
+  const start = fromZonedDateTime(year, month, day, 12, 0, 0, timezone);
+  const end = fromZonedDateTime(year, month, day + 6, 12, 0, 0, timezone);
+  const dayFmt = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", timeZone: timezone });
+  const yearFmt = new Intl.DateTimeFormat("en-US", { year: "numeric", timeZone: timezone });
+  return `${dayFmt.format(start)}–${dayFmt.format(end)}, ${yearFmt.format(end)}`;
+}
+
+/** Inclusive calendar dates in org timezone → UTC bounds for timestamp filters. */
+export function inclusiveDateRangeIso(from: string, to: string | null, timezone: string) {
+  const [startYear, startMonth, startDay] = from.split("-").map(Number);
+  const start = fromZonedDateTime(startYear, startMonth, startDay, 0, 0, 0, timezone);
+  if (!to) return { startIso: start.toISOString(), endExclusiveIso: null as string | null };
+  const [endYear, endMonth, endDay] = to.split("-").map(Number);
+  const end = fromZonedDateTime(endYear, endMonth, endDay + 1, 0, 0, 0, timezone);
+  return { startIso: start.toISOString(), endExclusiveIso: end.toISOString() };
+}

@@ -19,5 +19,10 @@ export {
   previousIftaQuarter,
   fromZonedDateTime,
   hoursBetween,
+  periodKeyInTimezone,
+  periodLabelInTimezone,
+  startOfWeekSunday,
+  inclusiveDateRangeIso,
+  type FuelPeriod,
 } from "./dates";
 export { duplicateReceiptSignature, sha256Hex } from "./duplicates";

@@ -1,0 +1,12 @@
+---
+description: Push to GitHub after commits in this repo
+alwaysApply: true
+---
+
+# Auto-push
+
+Jeff asked to push this repo to GitHub automatically going forward.
+
+- After a commit the user requested (or implied by “push these updates”), run `git push` to the tracked remote. If the branch has no upstream, `git push -u origin HEAD`.
+- Do not wait for a second “please push” message on this repo.
+- Never force-push. Never skip hooks. Never push unrelated dirty files.

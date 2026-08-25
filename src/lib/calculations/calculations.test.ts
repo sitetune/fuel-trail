@@ -9,7 +9,7 @@ import {
   reachableDistanceMiles,
 } from "./fuel";
 import { effectiveStopCost, savingsVersusAlternative } from "./routing-cost";
-import { iftaQuarterRange, monthRangeInTimezone, isoDateInTimezone } from "./dates";
+import { iftaQuarterRange, monthRangeInTimezone, isoDateInTimezone, startOfWeekSunday, periodKeyInTimezone } from "./dates";
 import { duplicateReceiptSignature, sha256Hex } from "./duplicates";
 
 describe("weightedAveragePrice", () => {
@@ -151,6 +151,12 @@ describe("timezone quarters", () => {
     const month = monthRangeInTimezone("America/Chicago", new Date("2026-08-18T16:00:00Z"));
     expect(month.label).toBe("2026-08");
     expect(isoDateInTimezone(month.start, "America/Chicago")).toBe("2026-08-01");
+  });
+  it("weeks start on Sunday in org timezone", () => {
+    const tuesday = new Date("2026-08-18T16:00:00Z");
+    expect(isoDateInTimezone(startOfWeekSunday(tuesday, "America/Chicago"), "America/Chicago")).toBe("2026-08-16");
+    expect(periodKeyInTimezone(tuesday, "America/Chicago", "week")).toBe("2026-08-16");
+    expect(periodKeyInTimezone(tuesday, "America/Chicago", "year")).toBe("2026");
   });
 });
 

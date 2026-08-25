@@ -5,6 +5,7 @@ import { enforceRateLimit } from "@/lib/api/rate-limit";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { getFuelRouteProvider, rankRouteCandidates } from "@/lib/routing";
 import { haversineMiles } from "@/lib/routing/manual";
+import { issueRoutePlanToDriver } from "@/lib/routing/issue-plan";
 import type { RouteStation } from "@/lib/routing/types";
 
 const bodySchema = z.object({
@@ -179,11 +180,12 @@ export async function POST(request: Request) {
         recommended_purchase_gallons: best?.gallonsRecommended ?? null,
         recommendation_explanation: best,
         trailer_attached: body.trailerAttached,
-        status: body.issueToDriver ? "issued" : "draft",
+        status: "draft",
       })
       .select("id")
       .single();
 
+    let driverNotified = false;
     if (plan) {
       await supabase.from("route_stop_candidates").insert(
         ranked.map((candidate) => ({
@@ -206,6 +208,12 @@ export async function POST(request: Request) {
           assumptions: candidate.assumptions,
         })),
       );
+      if (body.issueToDriver) {
+        const issued = await issueRoutePlanToDriver(user, plan.id);
+        driverNotified = issued.ok;
+        if (issued.ok) notices.push("Fuel-stop notification sent to the assigned driver.");
+        else notices.push(issued.message);
+      }
     }
 
     if (route.provider === "manual") notices.push(...route.notices);
@@ -213,7 +221,7 @@ export async function POST(request: Request) {
       notices.push("HERE_API_KEY is not configured; using manual routing.");
     }
 
-    return apiOk({ planId: plan?.id, route, ranked, recommendation: best, notices });
+    return apiOk({ planId: plan?.id, route, ranked, recommendation: best, notices, issued: driverNotified });
   } catch (error) {
     if (error instanceof AuthError) {
       return apiError(error.code === "unauthenticated" ? 401 : 403, error.code, error.message);

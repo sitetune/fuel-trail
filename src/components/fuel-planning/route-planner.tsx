@@ -4,13 +4,20 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input, Label } from "@/components/ui/input";
+import { IssuePlanButton } from "@/components/fuel-planning/issue-plan-button";
 
 export function RoutePlanner({
   trucks,
+  assignedTruckIds,
 }: {
   trucks: Array<{ id: string; unit_number: string }>;
+  assignedTruckIds: string[];
 }) {
   const [result, setResult] = useState<string>("");
+  const [planId, setPlanId] = useState<string | null>(null);
+  const [truckId, setTruckId] = useState(trucks[0]?.id ?? "");
+  const [issued, setIssued] = useState(false);
+  const assigned = new Set(assignedTruckIds);
   return (
     <Card>
       <form
@@ -18,11 +25,15 @@ export function RoutePlanner({
         onSubmit={async (event) => {
           event.preventDefault();
           const form = new FormData(event.currentTarget);
+          const selectedTruckId = String(form.get("truckId") ?? "");
+          const issueNow = form.get("issueToDriver") === "on";
+          setPlanId(null);
+          setIssued(false);
           const response = await fetch("/api/routes/plan", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-              truckId: form.get("truckId"),
+              truckId: selectedTruckId,
               originText: form.get("originText"),
               destinationText: form.get("destinationText"),
               originLat: form.get("originLat") ? Number(form.get("originLat")) : undefined,
@@ -33,7 +44,7 @@ export function RoutePlanner({
                 ? Number(form.get("currentEstimatedGallons"))
                 : undefined,
               trailerAttached: form.get("trailerAttached") === "on",
-              issueToDriver: form.get("issueToDriver") === "on",
+              issueToDriver: issueNow,
             }),
           });
           const json = await response.json();
@@ -43,6 +54,9 @@ export function RoutePlanner({
           }
           const rec = json.data.recommendation;
           const notices = (json.data.notices as string[] | undefined)?.join(" ") ?? "";
+          setTruckId(selectedTruckId);
+          setPlanId(json.data.planId ?? null);
+          setIssued(Boolean(json.data.issued));
           setResult(
             rec
               ? `${rec.explanation} ${rec.assumptions?.length ? `Assumptions: ${rec.assumptions.join(" ")}` : ""} ${notices}`
@@ -51,7 +65,13 @@ export function RoutePlanner({
         }}
       >
         <Label htmlFor="truckId">Truck</Label>
-        <select id="truckId" name="truckId" className="h-11 w-full rounded-md border px-3" required>
+        <select
+          id="truckId"
+          name="truckId"
+          className="h-11 w-full rounded-md border px-3"
+          required
+          defaultValue={truckId}
+        >
           {trucks.map((truck) => (
             <option key={truck.id} value={truck.id}>
               {truck.unit_number}
@@ -75,13 +95,14 @@ export function RoutePlanner({
         </label>
         <label className="flex min-h-11 items-center gap-2">
           <input type="checkbox" name="issueToDriver" className="h-5 w-5" />
-          Issue to driver
+          Send a fuel-stop notification to the assigned driver
         </label>
         <Button type="submit" variant="primary" className="w-full">
           Rank fuel stops
         </Button>
       </form>
       {result ? <p className="mt-4 text-sm leading-6">{result}</p> : null}
+      {planId ? <IssuePlanButton planId={planId} issued={issued} canIssue={assigned.has(truckId)} /> : null}
     </Card>
   );
 }

@@ -6,7 +6,6 @@ import { usePathname } from "next/navigation";
 import {
   Bell,
   ChartLine,
-  ClipboardText,
   FileText,
   GasPump,
   Gear,
@@ -15,7 +14,6 @@ import {
   MapPin,
   Receipt,
   Shield,
-  SignOut,
   SquaresFour,
   TrendDown,
   Truck,
@@ -40,7 +38,6 @@ const ICONS: Record<string, typeof SquaresFour> = {
   "/manage/routes": MapPin,
   "/manage/stations": GasPump,
   "/manage/users": Users,
-  "/manage/audit": ClipboardText,
   "/manage/settings": Gear,
   "/manage/notifications": Bell,
   "/internal": Shield,

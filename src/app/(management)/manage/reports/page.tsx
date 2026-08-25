@@ -1,13 +1,30 @@
 import { IFTA_LIMITATION_NOTE, groupIftaWorksheet } from "@/lib/reports/ifta";
 import { parseReportFilters, queryFuelReportRows } from "@/lib/reports/query";
+import { groupAvgFuelByTruck } from "@/lib/reports/avg-fuel";
+import { isOwnerAdmin } from "@/lib/auth/roles";
 import { requireManagement } from "@/lib/auth/session";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input, Label } from "@/components/ui/input";
-import { weightedAveragePrice } from "@/lib/calculations";
-import { formatUsd } from "@/lib/utils";
+import { PageHeader } from "@/components/ui/page-header";
+import { ReportFilterForm } from "@/components/management/report-filter-form";
+import { formatGallons, formatUsd, cn } from "@/lib/utils";
+import { formatPricePerGallon } from "@/lib/receipts/format";
+import type { FuelPeriod } from "@/lib/calculations/dates";
 import Link from "next/link";
+
+const PERIODS: Array<{ id: FuelPeriod; label: string }> = [
+  { id: "week", label: "Weekly" },
+  { id: "month", label: "Monthly" },
+  { id: "year", label: "Yearly" },
+];
+
+function reportsHref(params: URLSearchParams, period: FuelPeriod) {
+  const next = new URLSearchParams(params);
+  next.set("period", period);
+  const query = next.toString();
+  return query ? `/manage/reports?${query}` : "/manage/reports";
+}
 
 export default async function ReportsPage({
   searchParams,
@@ -29,17 +46,20 @@ export default async function ReportsPage({
     supabase.from("profiles").select("id, full_name").eq("role", "driver").order("full_name"),
     supabase.from("report_runs").select("id, report_type, receipt_count, created_at, filters").order("created_at", { ascending: false }).limit(10),
   ]);
-  const byTruck = new Map<string, { gallons: number; spend: number; count: number; verified: number }>();
+  const avgFuel = groupAvgFuelByTruck({
+    rows: rows.map((row) => ({
+      unitNumber: row.unitNumber,
+      driverName: row.driverName,
+      purchasedAt: row.purchasedAt,
+      gallons: row.gallons,
+      total: row.total,
+    })),
+    timezone: user.organization.timezone || "America/Chicago",
+    period: filters.period,
+  });
   let amended = 0;
   for (const row of receipts) {
-    const unit = (row.trucks as { unit_number: string } | null)?.unit_number ?? "Unknown";
-    const current = byTruck.get(unit) ?? { gallons: 0, spend: 0, count: 0, verified: 0 };
-    current.gallons += Number(row.gallons ?? 0);
-    current.spend += Number(row.total_amount ?? 0);
-    current.count += 1;
-    if (row.status === "verified") current.verified += 1;
     if (row.amended_at) amended += 1;
-    byTruck.set(unit, current);
   }
   const ifta = groupIftaWorksheet(rows);
   const query = url.searchParams.toString();
@@ -48,72 +68,11 @@ export default async function ReportsPage({
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-semibold">Reports</h1>
-      <Card>
-        <form className="grid gap-3 md:grid-cols-4" method="get">
-          <div>
-            <Label htmlFor="from">From</Label>
-            <Input id="from" name="from" type="date" defaultValue={filters.from ?? ""} />
-          </div>
-          <div>
-            <Label htmlFor="to">To</Label>
-            <Input id="to" name="to" type="date" defaultValue={filters.to ?? ""} />
-          </div>
-          <div>
-            <Label htmlFor="truckId">Truck</Label>
-            <select id="truckId" name="truckId" className="h-11 w-full rounded-md border px-3" defaultValue={filters.truckId ?? ""}>
-              <option value="">All trucks</option>
-              {(trucks ?? []).map((truck) => (
-                <option key={truck.id} value={truck.id}>
-                  Unit {truck.unit_number}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <Label htmlFor="driverId">Driver</Label>
-            <select id="driverId" name="driverId" className="h-11 w-full rounded-md border px-3" defaultValue={filters.driverId ?? ""}>
-              <option value="">All drivers</option>
-              {(drivers ?? []).map((driver) => (
-                <option key={driver.id} value={driver.id}>
-                  {driver.full_name}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <Label htmlFor="merchant">Merchant</Label>
-            <Input id="merchant" name="merchant" defaultValue={filters.merchant ?? ""} />
-          </div>
-          <div>
-            <Label htmlFor="jurisdiction">State</Label>
-            <Input id="jurisdiction" name="jurisdiction" defaultValue={filters.jurisdiction ?? ""} maxLength={2} />
-          </div>
-          <div>
-            <Label htmlFor="status">Status</Label>
-            <select id="status" name="status" className="h-11 w-full rounded-md border px-3" defaultValue={filters.status ?? ""}>
-              <option value="">Submitted + verified</option>
-              <option value="verified">verified</option>
-              <option value="submitted">submitted</option>
-            </select>
-          </div>
-          <div>
-            <Label htmlFor="report">Report membership</Label>
-            <select id="report" name="report" className="h-11 w-full rounded-md border px-3" defaultValue={filters.report ?? ""}>
-              <option value="">All</option>
-              <option value="unreported">Unreported</option>
-              <option value="reported">Already reported</option>
-            </select>
-          </div>
-          <div>
-            <Label htmlFor="fuelType">Fuel type</Label>
-            <Input id="fuelType" name="fuelType" defaultValue={filters.fuelType ?? ""} placeholder="diesel" />
-          </div>
-          <div className="flex items-end">
-            <Button type="submit">Apply filters</Button>
-          </div>
-        </form>
-      </Card>
+      <PageHeader
+        title="Reports"
+        description="Average fuel by truck for each week, month, or year. Driver names are included when a receipt has one."
+      />
+      <ReportFilterForm filters={filters} trucks={trucks ?? []} drivers={drivers ?? []} />
       <div className="flex flex-wrap gap-3">
         <Button asChild variant="primary">
           <a href={csvHref} download="fueltrail-fuel-report.csv">
@@ -125,11 +84,13 @@ export default async function ReportsPage({
             Download IFTA-ready fuel CSV
           </a>
         </Button>
-        <Button asChild variant="outline">
-          <a href="/api/org/export.json" download="fueltrail-org-export.json">
-            Download organization data export
-          </a>
-        </Button>
+        {isOwnerAdmin(user.profile.role) ? (
+          <Button asChild variant="outline">
+            <a href="/api/org/export.json" download="fueltrail-org-export.json">
+              Download organization data export
+            </a>
+          </Button>
+        ) : null}
         <Button asChild variant="ghost">
           <Link href="/manage/reports">Clear filters</Link>
         </Button>
@@ -140,38 +101,62 @@ export default async function ReportsPage({
         </p>
       ) : null}
       <Card>
-        <h2 className="font-semibold">Truck fuel report</h2>
-        <p className="mb-3 text-sm text-muted">CSV export snapshots the current filter so later edits do not silently rewrite history.</p>
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <h2 className="font-display text-lg font-semibold tracking-tight">Average fuel by truck</h2>
+            <p className="mt-1 text-sm text-muted">
+              Gallons, spend, and average price from submitted and verified receipts.
+            </p>
+          </div>
+          <div className="inline-grid grid-cols-3 rounded-full border border-steel/30 bg-warm p-1" role="group" aria-label="Report period">
+            {PERIODS.map((period) => (
+              <Link
+                key={period.id}
+                href={reportsHref(url.searchParams, period.id)}
+                className={cn(
+                  "min-h-11 rounded-full px-4 text-center text-sm font-semibold leading-[2.75rem]",
+                  filters.period === period.id ? "bg-route text-white" : "text-muted hover:text-ink",
+                )}
+                aria-current={filters.period === period.id ? "page" : undefined}
+              >
+                {period.label}
+              </Link>
+            ))}
+          </div>
+        </div>
+        <div className="mt-4 overflow-x-auto">
+          <table className="w-full min-w-[720px] text-left text-sm">
             <thead>
-              <tr className="border-b">
+              <tr className="border-b border-steel/30 text-muted">
                 <th className="py-2">Truck</th>
+                <th>Period</th>
+                <th>Driver</th>
                 <th>Gallons</th>
+                <th>Avg fill</th>
                 <th>Spend</th>
                 <th>Avg price</th>
                 <th>Receipts</th>
-                <th>Verified</th>
               </tr>
             </thead>
             <tbody>
-              {[...byTruck.entries()].map(([unit, stats]) => (
-                <tr key={unit} className="border-b">
-                  <td className="py-2">{unit}</td>
-                  <td>{stats.gallons.toFixed(1)}</td>
-                  <td>{formatUsd(stats.spend)}</td>
-                  <td>
-                    {weightedAveragePrice({ spend: stats.spend, gallons: stats.gallons }) === null
-                      ? "—"
-                      : formatUsd(weightedAveragePrice({ spend: stats.spend, gallons: stats.gallons }) ?? 0)}
-                  </td>
-                  <td>{stats.count}</td>
-                  <td>{stats.verified}</td>
+              {avgFuel.map((row) => (
+                <tr key={row.key} className="border-b border-steel/20">
+                  <td className="py-2 font-medium">{row.unitNumber}</td>
+                  <td>{row.periodLabel}</td>
+                  <td>{row.driverNames.join(", ") || "—"}</td>
+                  <td className="tabular-nums">{formatGallons(row.gallons)}</td>
+                  <td className="tabular-nums">{formatGallons(row.avgFillGallons)}</td>
+                  <td className="tabular-nums">{formatUsd(row.spend)}</td>
+                  <td className="tabular-nums">{formatPricePerGallon(row.avgPrice)}</td>
+                  <td className="tabular-nums">{row.receipts}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
+        {avgFuel.length === 0 ? (
+          <p className="mt-3 text-sm text-muted">No submitted or verified receipts in this view yet.</p>
+        ) : null}
       </Card>
       <Card>
         <h2 className="font-semibold">IFTA-ready fuel purchase worksheet</h2>

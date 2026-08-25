@@ -11,6 +11,7 @@ export const NOTIFICATION_EVENTS = [
   "import_completed",
   "import_failed",
   "unreviewed_aging",
+  "fuel_stop_issued",
 ] as const;
 
 export type NotificationEvent = (typeof NOTIFICATION_EVENTS)[number];

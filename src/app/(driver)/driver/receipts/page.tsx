@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { requireSession } from "@/lib/auth/session";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ReceiptStatusBadge } from "@/components/receipts/status-badge";
 import { ReceiptThumb } from "@/components/receipts/receipt-thumb";
@@ -21,7 +22,15 @@ export default async function DriverReceiptsPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-semibold">Receipts</h1>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-semibold">Receipts</h1>
+          <p className="text-sm text-muted">Your submission history</p>
+        </div>
+        <Button asChild variant="primary">
+          <Link href="/driver/receipts/new">Add receipt</Link>
+        </Button>
+      </div>
       {actionRequired.length > 0 ? (
         <section className="space-y-2">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-alert">Rejected — Action Required</h2>
@@ -34,7 +43,7 @@ export default async function DriverReceiptsPage() {
         {rest.map((receipt) => (
           <DriverReceiptCard key={receipt.id} receipt={receipt} />
         ))}
-        {(receipts ?? []).length === 0 ? <Card>No receipts yet.</Card> : null}
+        {(receipts ?? []).length === 0 ? <Card>No receipts yet. Add one after you fuel.</Card> : null}
       </section>
     </div>
   );

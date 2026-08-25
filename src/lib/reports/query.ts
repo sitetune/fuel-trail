@@ -1,33 +1,11 @@
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import type { SessionUser } from "@/types/domain";
 import type { FuelReportRow } from "@/lib/reports/ifta";
+import { inclusiveDateRangeIso } from "@/lib/calculations/dates";
+import { type ReportFilters } from "@/lib/reports/filters";
 
-export type ReportFilters = {
-  from?: string | null;
-  to?: string | null;
-  truckId?: string | null;
-  driverId?: string | null;
-  merchant?: string | null;
-  jurisdiction?: string | null;
-  status?: string | null;
-  fuelType?: string | null;
-  report?: "reported" | "unreported" | null;
-};
-
-export function parseReportFilters(url: URL): ReportFilters {
-  const report = url.searchParams.get("report");
-  return {
-    from: url.searchParams.get("from"),
-    to: url.searchParams.get("to"),
-    truckId: url.searchParams.get("truckId"),
-    driverId: url.searchParams.get("driverId"),
-    merchant: url.searchParams.get("merchant"),
-    jurisdiction: url.searchParams.get("jurisdiction") ?? url.searchParams.get("region"),
-    status: url.searchParams.get("status"),
-    fuelType: url.searchParams.get("fuelType"),
-    report: report === "reported" || report === "unreported" ? report : null,
-  };
-}
+export type { ReportFilters } from "@/lib/reports/filters";
+export { parseReportFilters, reportFiltersAreActive } from "@/lib/reports/filters";
 
 export async function queryFuelReportRows(user: SessionUser, filters: ReportFilters) {
   const supabase = await createServerSupabaseClient();
@@ -40,8 +18,15 @@ export async function queryFuelReportRows(user: SessionUser, filters: ReportFilt
   } else {
     query = query.in("status", ["submitted", "verified"]);
   }
-  if (filters.from) query = query.gte("purchased_at", filters.from);
-  if (filters.to) query = query.lte("purchased_at", filters.to);
+  const timezone = user.organization.timezone || "America/Chicago";
+  if (filters.from) {
+    const range = inclusiveDateRangeIso(filters.from, filters.to ?? null, timezone);
+    query = query.gte("purchased_at", range.startIso);
+    if (range.endExclusiveIso) query = query.lt("purchased_at", range.endExclusiveIso);
+  } else if (filters.to) {
+    const range = inclusiveDateRangeIso("1970-01-01", filters.to, timezone);
+    if (range.endExclusiveIso) query = query.lt("purchased_at", range.endExclusiveIso);
+  }
   if (filters.truckId) query = query.eq("truck_id", filters.truckId);
   if (filters.driverId) query = query.eq("driver_id", filters.driverId);
   if (filters.jurisdiction) query = query.eq("merchant_region", filters.jurisdiction);

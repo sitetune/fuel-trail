@@ -6,9 +6,17 @@ import { Card } from "@/components/ui/card";
 
 export function PriceImportForm() {
   const [message, setMessage] = useState("");
+  const [open, setOpen] = useState(false);
   return (
     <Card className="space-y-3">
-        <h2 className="font-semibold">Import station prices</h2>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h2 className="font-semibold">Station prices</h2>
+        <Button type="button" variant="outline" onClick={() => setOpen((value) => !value)}>
+          {open ? "Close" : "Import prices"}
+        </Button>
+      </div>
+      {open ? (
+        <>
         <Button asChild variant="outline">
           <a href="/api/imports/templates/fuel-prices" download="fueltrail-fuel-prices-template.csv">
             Download station price CSV template
@@ -44,6 +52,8 @@ export function PriceImportForm() {
         <Button type="submit">Preview / import</Button>
       </form>
       {message ? <p className="text-sm">{message}</p> : null}
+        </>
+      ) : null}
     </Card>
   );
 }

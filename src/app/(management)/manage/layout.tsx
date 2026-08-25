@@ -19,7 +19,6 @@ const links = [
   { href: "/manage/routes", label: "Fuel stops" },
   { href: "/manage/stations", label: "Stations" },
   { href: "/manage/users", label: "Users" },
-  { href: "/manage/audit", label: "Audit" },
   { href: "/manage/notifications", label: "Alerts" },
   { href: "/manage/settings", label: "Settings" },
 ];

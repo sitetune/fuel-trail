@@ -18,6 +18,7 @@ const LABELS: Record<NotificationEvent, string> = {
   import_completed: "Import completed",
   import_failed: "Import failed",
   unreviewed_aging: "Unreviewed receipts aging",
+  fuel_stop_issued: "Fuel-stop recommendation",
 };
 
 export function NotificationPreferences({

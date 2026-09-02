@@ -1,7 +1,8 @@
 import { AuthError, getSessionUser } from "@/lib/auth/session";
 import { apiError, apiOk } from "@/lib/api/http";
 import { parseBillingInterval, parsePlanId, PLANS } from "@/lib/billing/plans";
-import { createCheckoutSession } from "@/lib/billing/stripe";
+import { changeSubscriptionPlan, createCheckoutSession } from "@/lib/billing/stripe";
+import { createServiceRoleClient } from "@/lib/supabase/admin";
 
 export async function POST(request: Request) {
   try {
@@ -9,11 +10,33 @@ export async function POST(request: Request) {
     if (!user) {
       throw new AuthError("Sign in required.", "unauthenticated");
     }
+    if (user.profile.role !== "owner_admin") {
+      throw new AuthError("Owner access required.", "forbidden");
+    }
     const body = (await request.json().catch(() => ({}))) as { plan?: string; period?: string };
     const planId = parsePlanId(body.plan) ?? parsePlanId(user.organization.plan_id);
     const interval = parseBillingInterval(body.period ?? user.organization.billing_interval);
     if (!planId || !PLANS[planId].selfServe) {
       return apiError(400, "plan_required", "Choose Starter, Growth, or Fleet to check out.");
+    }
+    const subscriptionId = user.organization.stripe_subscription_id;
+    if (subscriptionId && user.organization.billing_status === "active") {
+      await changeSubscriptionPlan({
+        subscriptionId,
+        organizationId: user.organization.id,
+        planId,
+        interval,
+      });
+      const admin = createServiceRoleClient();
+      await admin
+        .from("organizations")
+        .update({
+          plan_id: planId,
+          billing_interval: interval,
+          billing_status: "active",
+        })
+        .eq("id", user.organization.id);
+      return apiOk({ updated: true });
     }
     const session = await createCheckoutSession({
       organizationId: user.organization.id,

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { canMutateFleet } from "@/lib/auth/roles";
+import { canManageOrgSettings, canMutateFleet } from "@/lib/auth/roles";
 import { requireManagement } from "@/lib/auth/session";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { ConfirmSubmit } from "@/components/management/confirm-submit";
@@ -27,7 +27,18 @@ export default async function TrucksPage({
             <Link href="/manage/import">Import CSV</Link>
           </Button>
         </div>
-        {params.error ? <p className="mb-3 text-sm text-alert">{params.error}</p> : null}
+        {params.error ? (
+          <p className="mb-3 text-sm text-alert">
+            {params.error}{" "}
+            {canManageOrgSettings(user.profile.role) ? (
+              <Link className="font-medium text-route" href="/manage/billing">
+                Upgrade plan
+              </Link>
+            ) : (
+              <span>Ask the owner to upgrade on Billing.</span>
+            )}
+          </p>
+        ) : null}
         <div className="mb-4 space-y-2">
           <p className="text-sm text-muted">Download a truck template, then import from Import Center.</p>
           <CsvTemplateDownloads kinds={["trucks"]} />

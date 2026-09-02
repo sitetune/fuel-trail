@@ -8,6 +8,7 @@ import {
   ChartLine,
   FileText,
   GasPump,
+  CreditCard,
   Gear,
   List,
   ListChecks,
@@ -37,6 +38,7 @@ const ICONS: Record<string, typeof SquaresFour> = {
   "/manage/routes": GasPump,
   "/manage/users": Users,
   "/manage/settings": Gear,
+  "/manage/billing": CreditCard,
   "/manage/notifications": Bell,
   "/internal": Shield,
 };

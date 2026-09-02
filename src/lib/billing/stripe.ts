@@ -65,8 +65,8 @@ export async function createCheckoutSession(input: {
     customer: input.customerId || undefined,
     customer_email: input.customerId ? undefined : input.email,
     line_items: [{ price, quantity: 1 }],
-    success_url: `${appUrl()}/manage/setup?billing=ok`,
-    cancel_url: `${appUrl()}/waiting`,
+    success_url: `${appUrl()}/manage/billing?billing=ok`,
+    cancel_url: `${appUrl()}/manage/billing`,
     metadata: {
       organization_id: input.organizationId,
       plan_id: input.planId,
@@ -78,6 +78,40 @@ export async function createCheckoutSession(input: {
         plan_id: input.planId,
         billing_interval: input.interval,
       },
+    },
+    // Test accounts enable Managed Payments by default; that requires a product
+    // tax_code. FuelTrail is the merchant of record for these subscriptions.
+    managed_payments: { enabled: false },
+  } as Stripe.Checkout.SessionCreateParams);
+}
+
+export async function changeSubscriptionPlan(input: {
+  subscriptionId: string;
+  organizationId: string;
+  planId: PlanId;
+  interval: BillingInterval;
+}) {
+  const plan = PLANS[input.planId];
+  if (!plan.selfServe) {
+    throw new Error("Enterprise is not available for self-serve checkout.");
+  }
+  const price = stripePriceId(input.planId, input.interval);
+  if (!price) {
+    throw new Error(`Missing Stripe price ID for ${plan.name} ${input.interval === "year" ? "annual" : "monthly"}.`);
+  }
+  const stripe = getStripe();
+  const subscription = await stripe.subscriptions.retrieve(input.subscriptionId);
+  const itemId = subscription.items.data[0]?.id;
+  if (!itemId) {
+    throw new Error("This subscription has no price to change.");
+  }
+  return stripe.subscriptions.update(input.subscriptionId, {
+    items: [{ id: itemId, price }],
+    proration_behavior: "create_prorations",
+    metadata: {
+      organization_id: input.organizationId,
+      plan_id: input.planId,
+      billing_interval: input.interval,
     },
   });
 }

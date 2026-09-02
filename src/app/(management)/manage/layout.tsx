@@ -20,6 +20,7 @@ const links = [
   { href: "/manage/users", label: "Users" },
   { href: "/manage/notifications", label: "Alerts" },
   { href: "/manage/settings", label: "Settings" },
+  { href: "/manage/billing", label: "Billing" },
 ];
 
 export const dynamic = "force-dynamic";
@@ -34,7 +35,12 @@ export default async function ManageLayout({ children }: { children: ReactNode }
   }
   if (!user) redirect("/login");
   void notifyAgingReceipts(user.organization.id);
-  const visible = links.filter((link) => link.href !== "/manage/setup" || user.profile.role === "owner_admin");
+  const visible = links.filter((link) => {
+    if (link.href === "/manage/setup" || link.href === "/manage/billing") {
+      return user.profile.role === "owner_admin";
+    }
+    return true;
+  });
   const nav = isPlatformAdminEmail(user.profile.email)
     ? [...visible, { href: "/internal", label: "Admin" }]
     : visible;

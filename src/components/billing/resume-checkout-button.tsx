@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 
 export function ResumeCheckoutButton({
@@ -14,6 +15,7 @@ export function ResumeCheckoutButton({
   label?: string;
   variant?: "primary" | "outline";
 }) {
+  const router = useRouter();
   const [message, setMessage] = useState("");
   return (
     <div className="space-y-2">
@@ -31,11 +33,11 @@ export function ResumeCheckoutButton({
             | { data?: { url?: string; updated?: boolean }; error?: { message?: string } }
             | null;
           if (payload && "data" in payload && payload.data?.updated) {
-            window.location.href = "/manage/billing?billing=ok";
+            router.push("/manage/billing?billing=ok");
             return;
           }
           if (payload && "data" in payload && payload.data?.url) {
-            window.location.href = payload.data.url;
+            window.location.assign(payload.data.url);
             return;
           }
           setMessage(payload?.error?.message ?? "Could not start checkout.");

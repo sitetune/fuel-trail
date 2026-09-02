@@ -65,7 +65,7 @@ export function AuthFrame({ children }: { children: ReactNode }) {
         </div>
       </aside>
       <div className="flex flex-col justify-center bg-warm px-4 py-12 sm:px-8">
-        <div className="mx-auto w-full max-w-md">
+        <div className="mx-auto w-full max-w-lg">
           <div className="mb-8 lg:hidden">
             <BrandLockup href="/" showTagline />
           </div>

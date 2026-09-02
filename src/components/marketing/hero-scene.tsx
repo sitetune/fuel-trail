@@ -15,7 +15,6 @@ export function HeroScene() {
     <div className="absolute inset-0">
       <picture>
         <source media="(max-width: 767px)" srcSet="/images/hero-truck-mobile.webp" type="image/webp" />
-        {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src="/images/hero-truck.webp"
           alt="Blue semi-truck fueling at a night station"

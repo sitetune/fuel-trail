@@ -24,7 +24,10 @@ export function FuelStopMap({
   const mapRef = useRef<LeafletMap | null>(null);
   const layerRef = useRef<import("leaflet").LayerGroup | null>(null);
   const onMapClickRef = useRef(onMapClick);
-  onMapClickRef.current = onMapClick;
+
+  useEffect(() => {
+    onMapClickRef.current = onMapClick;
+  }, [onMapClick]);
 
   useEffect(() => {
     let cancelled = false;

@@ -59,7 +59,7 @@ export default async function HomePage() {
               </p>
               <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
                 <Button asChild size="lg" variant="primary" className="w-full sm:w-auto">
-                  <Link href="/signup?plan=growth">Get started</Link>
+                  <Link href="/signup">Get started</Link>
                 </Button>
                 <Button
                   asChild
@@ -134,7 +134,7 @@ export default async function HomePage() {
           <div className="space-y-2 text-sm">
             <p className="font-semibold text-warm">Legal</p>
             <p className="text-steel">Receipt images stay in your company workspace.</p>
-            <Link className="block font-medium text-route hover:text-sky" href="/signup?plan=growth">
+            <Link className="block font-medium text-route hover:text-sky" href="/signup">
               Get started
             </Link>
           </div>

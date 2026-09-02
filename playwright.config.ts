@@ -1,4 +1,4 @@
-import { defineConfig, devices } from "@playwright/test";
+import { defineConfig } from "@playwright/test";
 
 const port = 3021;
 
@@ -20,7 +20,7 @@ export default defineConfig({
       },
   projects: [
     { name: "mobile-360", use: { viewport: { width: 360, height: 800 } } },
-    { name: "mobile-390", use: { ...devices["iPhone 13"] } },
+    { name: "mobile-390", use: { viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true } },
     { name: "tablet", use: { viewport: { width: 768, height: 1024 } } },
     { name: "desktop", use: { viewport: { width: 1440, height: 900 } } },
   ],

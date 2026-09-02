@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { parseBillingInterval, parsePlanId, PLANS, type BillingInterval, type PlanId } from "@/lib/billing/plans";
+import { parseBillingInterval, parsePlanId, PLAN_IDS, PLANS, type BillingInterval, type PlanId } from "@/lib/billing/plans";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { organizationSlug } from "@/lib/orgs/status";
 
@@ -10,7 +10,7 @@ export const signupSchema = z.object({
   companyName: z.string().trim().min(2).max(120),
   timezone: z.string().trim().min(3).default("America/Chicago"),
   baseJurisdiction: z.string().trim().length(2).optional(),
-  plan: z.string().optional(),
+  plan: z.enum(PLAN_IDS),
   period: z.string().optional(),
 });
 

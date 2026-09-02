@@ -4,6 +4,7 @@ import { canManageOrgSettings } from "@/lib/auth/roles";
 import { requireManagement } from "@/lib/auth/session";
 import { orgPlanId } from "@/lib/billing/assert";
 import { PLAN_LIST, PLANS, parseBillingInterval } from "@/lib/billing/plans";
+import { completePaidCheckout } from "@/lib/billing/webhook";
 import { redirect } from "next/navigation";
 
 function formatUsd(amount: number) {
@@ -22,11 +23,18 @@ const STATUS_LABEL: Record<string, string> = {
 export default async function BillingPage({
   searchParams,
 }: {
-  searchParams: Promise<{ billing?: string }>;
+  searchParams: Promise<{ billing?: string; session_id?: string }>;
 }) {
   const user = await requireManagement();
   if (!canManageOrgSettings(user.profile.role)) redirect("/manage/settings");
   const params = await searchParams;
+  if (params.session_id) {
+    try {
+      await completePaidCheckout(params.session_id, user.organization.id);
+    } catch {
+      // Webhook may already have applied the session.
+    }
+  }
   const planId = orgPlanId(user.organization);
   const plan = planId ? PLANS[planId] : null;
   const interval = parseBillingInterval(user.organization.billing_interval);

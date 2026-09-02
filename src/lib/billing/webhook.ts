@@ -1,7 +1,7 @@
 import type Stripe from "stripe";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { parseBillingInterval, parsePlanId } from "./plans";
-import { planFromStripePriceId } from "./stripe";
+import { getStripe, planFromStripePriceId } from "./stripe";
 
 function billingStatusFromStripe(status: string | null | undefined) {
   if (status === "active" || status === "trialing") return "active";
@@ -31,6 +31,18 @@ export async function applyCheckoutCompleted(session: Stripe.Checkout.Session) {
       billing_status: "active",
     })
     .eq("id", organizationId);
+}
+
+export async function completePaidCheckout(sessionId: string, organizationId: string) {
+  const stripe = getStripe();
+  const session = await stripe.checkout.sessions.retrieve(sessionId);
+  if (session.metadata?.organization_id !== organizationId) {
+    throw new Error("This checkout does not belong to your company.");
+  }
+  if (session.status !== "complete") {
+    throw new Error("Checkout is not complete yet.");
+  }
+  await applyCheckoutCompleted(session);
 }
 
 export async function applySubscriptionChange(subscription: Stripe.Subscription) {

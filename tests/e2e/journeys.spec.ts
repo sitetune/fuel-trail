@@ -10,6 +10,7 @@ async function assertNoHorizontalOverflow(page: import("@playwright/test").Page)
 test("1. organization owner signup", async ({ page }) => {
   await page.goto("/signup");
   await expect(page.getByRole("heading", { name: "Create your company" })).toBeVisible();
+  await expect(page.getByText("Choose a plan")).toBeVisible();
   await expect(page.getByLabel("Company name")).toBeVisible();
   await expect(page.getByLabel("Work email")).toBeVisible();
   await expect(page.getByRole("button", { name: "Create company" })).toBeVisible();

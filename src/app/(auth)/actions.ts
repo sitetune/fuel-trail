@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { rethrowIfNextRedirect } from "@/lib/auth/redirect-error";
 import { AuthError, getSessionUser, redirectForUser } from "@/lib/auth/session";
-import { PLANS } from "@/lib/billing/plans";
+import { parsePlanId, PLANS } from "@/lib/billing/plans";
 import { createCheckoutSession } from "@/lib/billing/stripe";
 import { createOrganizationAccount, signupSchema } from "@/lib/orgs/signup";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
@@ -41,11 +41,11 @@ export async function signUpAction(formData: FormData) {
     plan: String(formData.get("plan") || "") || undefined,
     period: String(formData.get("period") || "") || undefined,
   });
-  if (!parsed.success) {
+  if (!parsed.success || !parsePlanId(parsed.data.plan)) {
     const plan = String(formData.get("plan") || "");
     const period = String(formData.get("period") || "");
     const retry = new URLSearchParams();
-    retry.set("error", "invalid");
+    retry.set("error", parsed.success ? "plan" : "invalid");
     if (plan) retry.set("plan", plan);
     if (period) retry.set("period", period);
     redirect(`/signup?${retry.toString()}`);
@@ -77,6 +77,7 @@ export async function signUpAction(formData: FormData) {
         email: parsed.data.email,
         planId: created.planId,
         interval: created.interval,
+        returnTo: "waiting",
       });
       if (session.url) redirect(session.url);
     } catch {

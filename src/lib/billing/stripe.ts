@@ -50,6 +50,7 @@ export async function createCheckoutSession(input: {
   planId: PlanId;
   interval: BillingInterval;
   customerId?: string | null;
+  returnTo?: "waiting" | "billing";
 }) {
   const plan = PLANS[input.planId];
   if (!plan.selfServe) {
@@ -60,13 +61,19 @@ export async function createCheckoutSession(input: {
     throw new Error(`Missing Stripe price ID for ${plan.name} ${input.interval === "year" ? "annual" : "monthly"}.`);
   }
   const stripe = getStripe();
+  const returnTo = input.returnTo ?? "billing";
+  const successUrl =
+    returnTo === "waiting"
+      ? `${appUrl()}/waiting?session_id={CHECKOUT_SESSION_ID}`
+      : `${appUrl()}/manage/billing?billing=ok&session_id={CHECKOUT_SESSION_ID}`;
+  const cancelUrl = returnTo === "waiting" ? `${appUrl()}/waiting` : `${appUrl()}/manage/billing`;
   return stripe.checkout.sessions.create({
     mode: "subscription",
     customer: input.customerId || undefined,
     customer_email: input.customerId ? undefined : input.email,
     line_items: [{ price, quantity: 1 }],
-    success_url: `${appUrl()}/manage/billing?billing=ok`,
-    cancel_url: `${appUrl()}/manage/billing`,
+    success_url: successUrl,
+    cancel_url: cancelUrl,
     metadata: {
       organization_id: input.organizationId,
       plan_id: input.planId,

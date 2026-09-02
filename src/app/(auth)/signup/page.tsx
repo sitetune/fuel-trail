@@ -2,7 +2,8 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input, Label, FieldError } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
-import { parseBillingInterval, parsePlanId, PLANS } from "@/lib/billing/plans";
+import { PlanPicker } from "@/components/billing/plan-picker";
+import { parseBillingInterval, parsePlanId } from "@/lib/billing/plans";
 import { signUpAction } from "../actions";
 
 export default async function SignupPage({
@@ -20,21 +21,19 @@ export default async function SignupPage({
         ? "Too many signups from this network. Try again in an hour."
         : params.error === "create"
           ? "Could not create the company. That email may already be in use."
-          : undefined;
+          : params.error === "plan"
+            ? "Choose a plan before creating the company."
+            : undefined;
   return (
     <Card className="space-y-5 p-6 sm:p-8">
       <div>
         <h1 className="font-display text-2xl font-semibold tracking-tight">Create your company</h1>
         <p className="mt-1 text-sm text-muted">
-          Start a FuelTrail workspace for drivers, trucks, and receipt audit.
-          {plan
-            ? ` ${PLANS[plan].name}${PLANS[plan].selfServe ? ` · ${interval === "year" ? "annual" : "monthly"}` : ""}.`
-            : ""}
+          Pick a plan, then start a workspace for drivers, trucks, and receipt audit.
         </p>
       </div>
       <form action={signUpAction} className="space-y-3">
-        {params.plan ? <input type="hidden" name="plan" value={params.plan} /> : null}
-        {params.period ? <input type="hidden" name="period" value={params.period} /> : null}
+        <PlanPicker defaultPlan={plan} defaultInterval={interval} />
         <div className="space-y-1.5">
           <Label htmlFor="companyName">Company name</Label>
           <Input id="companyName" name="companyName" required />

@@ -38,12 +38,23 @@ export async function POST(request: Request) {
         .eq("id", user.organization.id);
       return apiOk({ updated: true });
     }
+    const admin = createServiceRoleClient();
+    await admin
+      .from("organizations")
+      .update({
+        plan_id: planId,
+        billing_interval: interval,
+        billing_status: user.organization.billing_status === "active" ? "active" : "pending",
+      })
+      .eq("id", user.organization.id);
+    const pending = String(user.organization.status ?? "") === "pending_activation";
     const session = await createCheckoutSession({
       organizationId: user.organization.id,
       email: user.profile.email,
       planId,
       interval,
       customerId: user.organization.stripe_customer_id,
+      returnTo: pending ? "waiting" : "billing",
     });
     if (!session.url) {
       return apiError(400, "checkout_failed", "Stripe did not return a checkout URL.");

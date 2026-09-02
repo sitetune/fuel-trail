@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { parseBillingInterval, parsePlanId, PLANS, type BillingInterval, type PlanId } from "@/lib/billing/plans";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { organizationSlug } from "@/lib/orgs/status";
 
@@ -9,13 +10,35 @@ export const signupSchema = z.object({
   companyName: z.string().trim().min(2).max(120),
   timezone: z.string().trim().min(3).default("America/Chicago"),
   baseJurisdiction: z.string().trim().length(2).optional(),
+  plan: z.string().optional(),
+  period: z.string().optional(),
 });
 
 export type SignupInput = z.infer<typeof signupSchema>;
 
+function signupBilling(input: SignupInput): {
+  planId: PlanId | null;
+  interval: BillingInterval;
+  status: "active" | "pending_activation";
+  billingStatus: "none" | "pending" | "active";
+} {
+  const planId = parsePlanId(input.plan);
+  const interval = parseBillingInterval(input.period);
+  const autoActivate = process.env.SIGNUP_AUTO_ACTIVATE !== "false";
+  if (planId && (PLANS[planId].selfServe || planId === "enterprise")) {
+    return { planId, interval, status: "pending_activation", billingStatus: "pending" };
+  }
+  return {
+    planId,
+    interval,
+    status: autoActivate ? "active" : "pending_activation",
+    billingStatus: autoActivate ? "none" : "pending",
+  };
+}
+
 export async function createOrganizationAccount(input: SignupInput) {
   const admin = createServiceRoleClient();
-  const autoActivate = process.env.SIGNUP_AUTO_ACTIVATE !== "false";
+  const billing = signupBilling(input);
   const slug = organizationSlug(input.companyName);
   const { data: org, error: orgError } = await admin
     .from("organizations")
@@ -24,7 +47,10 @@ export async function createOrganizationAccount(input: SignupInput) {
       slug,
       timezone: input.timezone,
       base_jurisdiction: input.baseJurisdiction?.toUpperCase() ?? null,
-      status: autoActivate ? "active" : "pending_activation",
+      status: billing.status,
+      plan_id: billing.planId,
+      billing_interval: billing.planId ? billing.interval : null,
+      billing_status: billing.billingStatus,
       primary_contact_name: input.fullName,
       primary_contact_email: input.email,
     })
@@ -66,5 +92,11 @@ export async function createOrganizationAccount(input: SignupInput) {
     event_type: "organization_created",
     metadata: { slug, status: org.status },
   });
-  return { organizationId: org.id as string, userId: data.user.id, status: org.status as string };
+  return {
+    organizationId: org.id as string,
+    userId: data.user.id,
+    status: org.status as string,
+    planId: billing.planId,
+    interval: billing.interval,
+  };
 }

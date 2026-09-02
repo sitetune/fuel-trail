@@ -1,11 +1,13 @@
 import { AuthError, requireManagement } from "@/lib/auth/session";
 import { apiError } from "@/lib/api/http";
+import { assertPlanAllows, PlanLimitError } from "@/lib/billing/assert";
 import { toCsv } from "@/lib/reports/csv";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 export async function GET(request: Request) {
   try {
-    await requireManagement();
+    const user = await requireManagement();
+    assertPlanAllows(user.organization, "audit_exports");
     const url = new URL(request.url);
     const q = url.searchParams.get("q") ?? "";
     const entityType = url.searchParams.get("entityType") ?? "";
@@ -37,6 +39,9 @@ export async function GET(request: Request) {
       },
     });
   } catch (error) {
+    if (error instanceof PlanLimitError) {
+      return apiError(403, error.code, error.message);
+    }
     if (error instanceof AuthError) {
       return apiError(error.code === "unauthenticated" ? 401 : 403, error.code, error.message);
     }

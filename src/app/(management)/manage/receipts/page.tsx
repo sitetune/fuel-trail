@@ -13,7 +13,7 @@ import {
   receiptCenterQuery,
   receiptSearchOrFilter,
 } from "@/lib/receipts/list";
-import { formatPricePerGallon, formatReceiptDate, ocrConfidenceLabel } from "@/lib/receipts/format";
+import { formatCityState, formatPricePerGallon, formatShortDate, ocrConfidenceLabel } from "@/lib/receipts/format";
 import { isLowOcrConfidence } from "@/lib/receipts/states";
 import { formatGallons, formatUsd } from "@/lib/utils";
 
@@ -82,12 +82,12 @@ export default async function ReceiptCenterPage({
             <ReceiptThumb receiptId={receipt.id} alt={receipt.merchant_name ?? "Receipt"} />
             <Link href={`/manage/receipts/${receipt.id}`} className="min-w-0 flex-1">
               <div className="flex items-start justify-between gap-2">
-                <p className="font-semibold">Unit {(receipt.trucks as { unit_number?: string } | null)?.unit_number}</p>
-                <ReceiptStatusBadge status={receipt.status} />
+                <p className="font-semibold">{receipt.merchant_name ?? "—"}</p>
+                <ReceiptStatusBadge status={receipt.status} compact />
               </div>
-              <p className="text-sm">{receipt.merchant_name ?? "—"}</p>
+              <p className="text-sm">Unit {(receipt.trucks as { unit_number?: string } | null)?.unit_number ?? "—"}</p>
               <p className="text-sm text-muted">
-                {formatReceiptDate(receipt.purchased_at)} · {formatGallons(receipt.gallons == null ? null : Number(receipt.gallons), 3)} ·{" "}
+                {formatShortDate(receipt.purchased_at)} · {formatGallons(receipt.gallons == null ? null : Number(receipt.gallons), 3)} ·{" "}
                 {formatUsd(receipt.total_amount == null ? null : Number(receipt.total_amount))}
               </p>
               {isLowOcrConfidence(receipt.ocr_confidence == null ? null : Number(receipt.ocr_confidence)) ? (
@@ -98,77 +98,78 @@ export default async function ReceiptCenterPage({
         ))}
       </div>
       <Card className="hidden overflow-x-auto p-0 md:block">
-        <table className="w-full min-w-[1100px] text-left text-sm">
+        <table className="w-full min-w-[960px] text-left text-sm">
           <thead>
             <tr className="border-b border-steel/30 text-muted">
-              <th className="px-4 py-3 font-medium">Image</th>
-              <th className="px-4 py-3 font-medium">
+              <th className="px-3 py-3 font-medium">Image</th>
+              <th className="px-3 py-3 font-medium">Merchant</th>
+              <th className="px-3 py-3 font-medium">Truck</th>
+              <th className="px-3 py-3 font-medium">
                 <Link href={receiptCenterQuery(filters, { sort: "purchased_at", dir: filters.dir === "asc" ? "desc" : "asc", page: 1 })}>
-                  Transaction
+                  Date
                 </Link>
               </th>
-              <th className="px-4 py-3 font-medium">Submitted</th>
-              <th className="px-4 py-3 font-medium">Driver</th>
-              <th className="px-4 py-3 font-medium">Truck</th>
-              <th className="px-4 py-3 font-medium">Merchant</th>
-              <th className="px-4 py-3 font-medium">City / State</th>
-              <th className="px-4 py-3 font-medium">
+              <th className="px-3 py-3 font-medium">Driver</th>
+              <th className="px-3 py-3 font-medium">City / State</th>
+              <th className="px-3 py-3 font-medium">
                 <Link href={receiptCenterQuery(filters, { sort: "gallons", dir: filters.dir === "asc" ? "desc" : "asc", page: 1 })}>
                   Gallons
                 </Link>
               </th>
-              <th className="px-4 py-3 font-medium">Price/gal</th>
-              <th className="px-4 py-3 font-medium">
+              <th className="px-3 py-3 font-medium">Price/gal</th>
+              <th className="px-3 py-3 font-medium">
                 <Link href={receiptCenterQuery(filters, { sort: "total_amount", dir: filters.dir === "asc" ? "desc" : "asc", page: 1 })}>
                   Total
                 </Link>
               </th>
-              <th className="px-4 py-3 font-medium">Status</th>
-              <th className="px-4 py-3 font-medium">Reviewed</th>
-              <th className="px-4 py-3 font-medium">Report</th>
+              <th className="px-3 py-3 font-medium">Status</th>
+              <th className="px-3 py-3 font-medium">Report</th>
             </tr>
           </thead>
           <tbody>
             {(receipts ?? []).map((receipt) => (
-              <tr key={receipt.id} className="border-b border-steel/20 align-top last:border-b-0 hover:bg-warm/70">
-                <td className="px-4 py-3">
-                  <ReceiptThumb receiptId={receipt.id} alt={receipt.merchant_name ?? "Receipt"} />
+              <tr key={receipt.id} className="h-[76px] border-b border-steel/20 last:border-b-0 hover:bg-warm/70">
+                <td className="px-3 py-2">
+                  <ReceiptThumb
+                    receiptId={receipt.id}
+                    alt={receipt.merchant_name ?? "Receipt"}
+                    className="h-20 w-14 bg-warm object-cover"
+                  />
                 </td>
-                <td className="px-4 py-3">
-                  <Link className="font-semibold text-route" href={`/manage/receipts/${receipt.id}`}>
-                    {formatReceiptDate(receipt.purchased_at)}
+                <td className="px-3 py-2">
+                  <Link className="font-semibold text-ink hover:text-route" href={`/manage/receipts/${receipt.id}`}>
+                    {receipt.merchant_name ?? "—"}
                   </Link>
                 </td>
-                <td className="px-4 py-3 tabular-nums text-muted">{formatReceiptDate(receipt.submitted_at)}</td>
-                <td className="px-4 py-3">{(receipt.profiles as { full_name?: string } | null)?.full_name ?? "—"}</td>
-                <td className="px-4 py-3 font-medium">{(receipt.trucks as { unit_number?: string } | null)?.unit_number ?? "—"}</td>
-                <td className="px-4 py-3">{receipt.merchant_name ?? "—"}</td>
-                <td className="px-4 py-3 text-muted">
-                  {[receipt.merchant_city, receipt.merchant_region].filter(Boolean).join(", ") || "—"}
-                </td>
-                <td className="px-4 py-3 tabular-nums">{formatGallons(receipt.gallons == null ? null : Number(receipt.gallons), 3)}</td>
-                <td className="px-4 py-3 tabular-nums">
+                <td className="px-3 py-2 font-medium">{(receipt.trucks as { unit_number?: string } | null)?.unit_number ?? "—"}</td>
+                <td className="px-3 py-2 tabular-nums text-muted">{formatShortDate(receipt.purchased_at)}</td>
+                <td className="px-3 py-2">{(receipt.profiles as { full_name?: string } | null)?.full_name ?? "—"}</td>
+                <td className="px-3 py-2 text-muted">{formatCityState(receipt.merchant_city, receipt.merchant_region)}</td>
+                <td className="px-3 py-2 tabular-nums">{formatGallons(receipt.gallons == null ? null : Number(receipt.gallons), 3)}</td>
+                <td className="px-3 py-2 tabular-nums">
                   {formatPricePerGallon(receipt.price_per_gallon == null ? null : Number(receipt.price_per_gallon))}
                 </td>
-                <td className="px-4 py-3 tabular-nums font-medium">
+                <td className="px-3 py-2 tabular-nums font-medium">
                   {formatUsd(receipt.total_amount == null ? null : Number(receipt.total_amount))}
                 </td>
-                <td className="px-4 py-3">
-                  <ReceiptStatusBadge status={receipt.status} />
+                <td className="px-3 py-2">
+                  <ReceiptStatusBadge status={receipt.status} compact />
+                  {receipt.status === "rejected" ? (
+                    <p className="mt-1 text-xs text-muted">
+                      {formatShortDate(receipt.rejected_at)} · {(receipt.rejector as { full_name?: string } | null)?.full_name ?? "Manager"}
+                    </p>
+                  ) : receipt.verified_at ? (
+                    <p className="mt-1 text-xs text-muted">
+                      {formatShortDate(receipt.verified_at)} · {(receipt.reviewer as { full_name?: string } | null)?.full_name ?? "Manager"}
+                    </p>
+                  ) : null}
                   {isLowOcrConfidence(receipt.ocr_confidence == null ? null : Number(receipt.ocr_confidence)) ? (
                     <p className="mt-1 text-xs text-alert">{ocrConfidenceLabel(Number(receipt.ocr_confidence))}</p>
                   ) : null}
                 </td>
-                <td className="px-4 py-3 text-muted">
-                  {receipt.status === "rejected"
-                    ? `${formatReceiptDate(receipt.rejected_at)} · ${(receipt.rejector as { full_name?: string } | null)?.full_name ?? "Manager"}`
-                    : receipt.verified_at
-                      ? `${formatReceiptDate(receipt.verified_at)} · ${(receipt.reviewer as { full_name?: string } | null)?.full_name ?? "Manager"}`
-                      : "—"}
-                </td>
-                <td className="px-4 py-3 text-muted">
-                  {receipt.last_reported_at ? "Included" : "Unreported"}
-                  {receipt.amended_at ? " · Amended" : ""}
+                <td className="px-3 py-2 text-muted">
+                  {receipt.last_reported_at ? "Rpt" : "—"}
+                  {receipt.amended_at ? " · Amd" : ""}
                 </td>
               </tr>
             ))}

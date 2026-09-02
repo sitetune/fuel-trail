@@ -8,6 +8,12 @@ describe("parseReportFilters", () => {
     expect(reportFiltersAreActive(filters)).toBe(false);
   });
 
+  it("uppercases and maps state names", () => {
+    const filters = parseReportFilters(new URL("https://fueltrail.local/manage/reports?jurisdiction=texas"));
+    expect(filters.jurisdiction).toBe("TX");
+    expect(reportFiltersAreActive(filters)).toBe(true);
+  });
+
   it("reads weekly period and a date range", () => {
     const filters = parseReportFilters(
       new URL("https://fueltrail.local/manage/reports?period=week&from=2026-08-01&to=2026-08-31"),

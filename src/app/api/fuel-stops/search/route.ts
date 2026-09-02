@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { AuthError, requireManagement } from "@/lib/auth/session";
 import { apiError, apiOk } from "@/lib/api/http";
+import { assertPlanAllows, PlanLimitError } from "@/lib/billing/assert";
 import { enforceRateLimit } from "@/lib/api/rate-limit";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import {
@@ -21,6 +22,7 @@ const querySchema = z.object({
 export async function GET(request: Request) {
   try {
     const user = await requireManagement();
+    assertPlanAllows(user.organization, "fuel_stops");
     const limited = await enforceRateLimit({
       bucket: "fuelStops",
       userId: user.authUserId,
@@ -100,6 +102,9 @@ export async function GET(request: Request) {
         "Pump prices are from your imported or receipt-backed station file when we can match a stop. OpenStreetMap supplies locations, not live GasBuddy prices.",
     });
   } catch (error) {
+    if (error instanceof PlanLimitError) {
+      return apiError(403, error.code, error.message);
+    }
     if (error instanceof AuthError) {
       return apiError(error.code === "unauthenticated" ? 401 : 403, error.code, error.message);
     }

@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  canInvitePeople,
+  canManageOrgProfile,
   canManageOrgSettings,
   canManageUsers,
   canMutateFleet,
@@ -18,8 +20,11 @@ describe("roles", () => {
     expect(canMutateFleet("manager")).toBe(true);
     expect(canMutateFleet("auditor")).toBe(false);
   });
-  it("reserves org security for the owner", () => {
+  it("lets managers invite drivers and edit company profile, not security", () => {
     expect(canManageUsers("manager")).toBe(false);
+    expect(canInvitePeople("manager")).toBe(true);
+    expect(canManageOrgProfile("manager")).toBe(true);
+    expect(canManageOrgSettings("manager")).toBe(false);
     expect(canManageOrgSettings("owner_admin")).toBe(true);
   });
 });

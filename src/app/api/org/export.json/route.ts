@@ -1,10 +1,12 @@
 import { AuthError, requireOwner } from "@/lib/auth/session";
 import { apiError } from "@/lib/api/http";
+import { assertPlanAllows, PlanLimitError } from "@/lib/billing/assert";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 export async function GET() {
   try {
     const user = await requireOwner();
+    assertPlanAllows(user.organization, "audit_exports");
     const supabase = await createServerSupabaseClient();
     const [{ data: trucks }, { data: users }, { data: receipts }] = await Promise.all([
       supabase.from("trucks").select("id, unit_number, vin, license_plate, status, fuel_type"),
@@ -32,6 +34,9 @@ export async function GET() {
       },
     });
   } catch (error) {
+    if (error instanceof PlanLimitError) {
+      return apiError(403, error.code, error.message);
+    }
     if (error instanceof AuthError) {
       return apiError(error.code === "unauthenticated" ? 401 : 403, error.code, error.message);
     }

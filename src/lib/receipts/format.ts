@@ -10,6 +10,32 @@ export function formatReceiptDate(value: string | null | undefined) {
   }).format(date);
 }
 
+export function formatShortDate(value: string | null | undefined) {
+  if (!value) return "—";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "—";
+  return new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" }).format(date);
+}
+
+export function titleCaseWords(value: string) {
+  return value
+    .toLowerCase()
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
+}
+
+export function formatCityState(city?: string | null, region?: string | null) {
+  const cityPart = city?.trim() ? titleCaseWords(city.trim()) : null;
+  const statePart = region?.trim()
+    ? region.trim().length === 2
+      ? region.trim().toUpperCase()
+      : titleCaseWords(region.trim())
+    : null;
+  return [cityPart, statePart].filter(Boolean).join(", ") || "—";
+}
+
 export function formatReceiptDay(value: string | null | undefined) {
   if (!value) return "—";
   const date = new Date(value);

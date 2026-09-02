@@ -4,50 +4,8 @@ import { useState } from "react";
 import Link from "next/link";
 import { Check } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
+import { PLAN_LIST, signupHref, type BillingInterval } from "@/lib/billing/plans";
 import { cn } from "@/lib/utils";
-
-const plans = [
-  {
-    name: "Starter",
-    monthly: 39,
-    annual: 390,
-    fleet: "Up to 5 trucks",
-    features: ["Receipt capture in the cab", "Original images on file", "Driver app"],
-    cta: "Get started",
-    href: "/signup",
-    featured: false,
-  },
-  {
-    name: "Growth",
-    monthly: 99,
-    annual: 990,
-    fleet: "Up to 25 trucks",
-    features: ["Everything in Starter", "Truck-level spend reports", "Fuel savings insights"],
-    cta: "Get started",
-    href: "/signup",
-    featured: true,
-  },
-  {
-    name: "Fleet",
-    monthly: 229,
-    annual: 2290,
-    fleet: "Up to 75 trucks",
-    features: ["Everything in Growth", "Route planning", "Audit-ready exports"],
-    cta: "Get started",
-    href: "/signup",
-    featured: false,
-  },
-  {
-    name: "Enterprise",
-    monthly: null,
-    annual: null,
-    fleet: "76+ trucks",
-    features: ["Custom fleet size", "Review rules and auditors", "Priority onboarding"],
-    cta: "Talk to us",
-    href: "/signup",
-    featured: false,
-  },
-] as const;
 
 function formatUsd(amount: number) {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(
@@ -58,6 +16,7 @@ function formatUsd(amount: number) {
 export function PricingTable() {
   const [annual, setAnnual] = useState(false);
   const [hovered, setHovered] = useState<string | null>(null);
+  const interval: BillingInterval = annual ? "year" : "month";
   return (
     <div>
       <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -108,14 +67,14 @@ export function PricingTable() {
       </div>
 
       <div className="mt-10 grid items-stretch gap-5 overflow-visible py-4 md:grid-cols-2 xl:grid-cols-4">
-        {plans.map((plan) => {
+        {PLAN_LIST.map((plan) => {
           const price = annual ? plan.annual : plan.monthly;
           const saved = plan.monthly != null && plan.annual != null ? plan.monthly * 12 - plan.annual : null;
-          const active = hovered ? hovered === plan.name : plan.featured;
+          const active = hovered ? hovered === plan.id : plan.featured;
           return (
             <article
-              key={plan.name}
-              onMouseEnter={() => setHovered(plan.name)}
+              key={plan.id}
+              onMouseEnter={() => setHovered(plan.id)}
               onMouseLeave={() => setHovered(null)}
               className={cn(
                 "flex flex-col rounded-xl border p-5 origin-center transition-[transform,box-shadow,background-color,border-color] duration-200",
@@ -148,7 +107,7 @@ export function PricingTable() {
                 <p className="mt-2 text-xs font-semibold text-sky">Save {formatUsd(saved)}</p>
               ) : null}
               <ul className="mt-5 flex-1 space-y-2">
-                {plan.features.map((feature) => (
+                {plan.featureLabels.map((feature) => (
                   <li key={feature} className="flex gap-2 text-sm leading-relaxed text-steel">
                     <Check size={16} weight="bold" className="mt-0.5 shrink-0 text-sky" />
                     {feature}
@@ -164,7 +123,7 @@ export function PricingTable() {
                     : "mt-6 w-full border-white/25 bg-transparent text-warm hover:bg-white/10"
                 }
               >
-                <Link href={plan.href}>{plan.cta}</Link>
+                <Link href={signupHref(plan, interval)}>{plan.cta}</Link>
               </Button>
             </article>
           );

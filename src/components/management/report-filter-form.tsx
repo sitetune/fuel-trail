@@ -22,6 +22,8 @@ export function ReportFilterForm({
     filters.from || filters.to ? `${filters.from || "…"} to ${filters.to || "…"}` : null,
     filters.truckId ? trucks.find((truck) => truck.id === filters.truckId)?.unit_number : null,
     filters.driverId ? drivers.find((driver) => driver.id === filters.driverId)?.full_name : null,
+    filters.merchant ? filters.merchant : null,
+    filters.jurisdiction ? filters.jurisdiction : null,
   ]
     .filter(Boolean)
     .join(" · ");
@@ -70,11 +72,11 @@ export function ReportFilterForm({
             </div>
             <div>
               <Label htmlFor="merchant">Merchant</Label>
-              <Input id="merchant" name="merchant" defaultValue={filters.merchant ?? ""} />
+              <Input id="merchant" name="merchant" defaultValue={filters.merchant ?? ""} placeholder="Love's" />
             </div>
             <div>
               <Label htmlFor="jurisdiction">State</Label>
-              <Input id="jurisdiction" name="jurisdiction" defaultValue={filters.jurisdiction ?? ""} maxLength={2} />
+              <Input id="jurisdiction" name="jurisdiction" defaultValue={filters.jurisdiction ?? ""} placeholder="TX" />
             </div>
             <div>
               <Label htmlFor="status">Status</Label>

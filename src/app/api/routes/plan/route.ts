@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { AuthError, requireWriteManagement } from "@/lib/auth/session";
 import { apiError, apiOk } from "@/lib/api/http";
+import { assertPlanAllows, PlanLimitError } from "@/lib/billing/assert";
 import { enforceRateLimit } from "@/lib/api/rate-limit";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { getFuelRouteProvider, rankRouteCandidates } from "@/lib/routing";
@@ -27,6 +28,7 @@ const bodySchema = z.object({
 export async function POST(request: Request) {
   try {
     const user = await requireWriteManagement();
+    assertPlanAllows(user.organization, "fuel_stops");
     const limited = await enforceRateLimit({
       bucket: "route",
       userId: user.authUserId,
@@ -242,6 +244,9 @@ export async function POST(request: Request) {
 
     return apiOk({ planId: plan?.id, route, ranked, recommendation: best, notices, issued: driverNotified });
   } catch (error) {
+    if (error instanceof PlanLimitError) {
+      return apiError(403, error.code, error.message);
+    }
     if (error instanceof AuthError) {
       return apiError(error.code === "unauthenticated" ? 401 : 403, error.code, error.message);
     }

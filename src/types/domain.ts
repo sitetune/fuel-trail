@@ -102,6 +102,11 @@ export type Organization = {
   logo_path?: string | null;
   onboarded_at?: string | null;
   review_rules?: Record<string, boolean> | null;
+  plan_id?: string | null;
+  billing_interval?: string | null;
+  stripe_customer_id?: string | null;
+  stripe_subscription_id?: string | null;
+  billing_status?: string | null;
 };
 
 export type Truck = {

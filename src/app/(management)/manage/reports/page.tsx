@@ -1,6 +1,9 @@
 import { IFTA_LIMITATION_NOTE, groupIftaWorksheet } from "@/lib/reports/ifta";
 import { parseReportFilters, queryFuelReportRows } from "@/lib/reports/query";
 import { groupAvgFuelByTruck } from "@/lib/reports/avg-fuel";
+import { groupByCarrier } from "@/lib/reports/carrier";
+import { assertPlanAllows, PlanLimitError } from "@/lib/billing/assert";
+import { UpgradeNotice } from "@/components/billing/upgrade-notice";
 import { isOwnerAdmin } from "@/lib/auth/roles";
 import { requireManagement } from "@/lib/auth/session";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
@@ -32,6 +35,12 @@ export default async function ReportsPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const user = await requireManagement();
+  try {
+    assertPlanAllows(user.organization, "reports");
+  } catch (error) {
+    if (error instanceof PlanLimitError) return <UpgradeNotice message={error.message} />;
+    throw error;
+  }
   const raw = await searchParams;
   const url = new URL("https://fueltrail.local/manage/reports");
   for (const [key, value] of Object.entries(raw)) {
@@ -62,9 +71,11 @@ export default async function ReportsPage({
     if (row.amended_at) amended += 1;
   }
   const ifta = groupIftaWorksheet(rows);
+  const carriers = groupByCarrier(rows);
   const query = url.searchParams.toString();
   const csvHref = query ? `/api/reports/fuel.csv?${query}` : "/api/reports/fuel.csv";
   const iftaHref = query ? `/api/reports/ifta-fuel.csv?${query}` : "/api/reports/ifta-fuel.csv";
+  const carrierHref = query ? `/api/reports/carrier.csv?${query}` : "/api/reports/carrier.csv";
 
   return (
     <div className="space-y-6">
@@ -82,6 +93,11 @@ export default async function ReportsPage({
         <Button asChild variant="outline">
           <a href={iftaHref} download="fueltrail-ifta-fuel.csv">
             Download IFTA-ready fuel CSV
+          </a>
+        </Button>
+        <Button asChild variant="outline">
+          <a href={carrierHref} download="fueltrail-carrier-report.csv">
+            Download carrier CSV
           </a>
         </Button>
         {isOwnerAdmin(user.profile.role) ? (
@@ -155,6 +171,35 @@ export default async function ReportsPage({
           </table>
         </div>
         {avgFuel.length === 0 ? (
+          <p className="mt-3 text-sm text-muted">No submitted or verified receipts in this view yet.</p>
+        ) : null}
+      </Card>
+      <Card>
+        <h2 className="font-display text-lg font-semibold tracking-tight">By carrier</h2>
+        <p className="mt-1 text-sm text-muted">Gallons, spend, and receipt count grouped by merchant name.</p>
+        <div className="mt-4 overflow-x-auto">
+          <table className="w-full min-w-[560px] text-left text-sm">
+            <thead>
+              <tr className="border-b border-steel/30 text-muted">
+                <th className="py-2">Merchant</th>
+                <th>Gallons</th>
+                <th>Spend</th>
+                <th>Receipts</th>
+              </tr>
+            </thead>
+            <tbody>
+              {carriers.map((row) => (
+                <tr key={row.merchant} className="border-b border-steel/20">
+                  <td className="py-2 font-medium">{row.merchant}</td>
+                  <td className="tabular-nums">{formatGallons(row.gallons)}</td>
+                  <td className="tabular-nums">{formatUsd(row.spend)}</td>
+                  <td className="tabular-nums">{row.receipts}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        {carriers.length === 0 ? (
           <p className="mt-3 text-sm text-muted">No submitted or verified receipts in this view yet.</p>
         ) : null}
       </Card>

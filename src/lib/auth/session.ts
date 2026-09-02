@@ -6,7 +6,7 @@ import { isPlatformAdminEmail, orgIsUsable } from "@/lib/orgs/status";
 
 export { AuthError } from "@/lib/auth/errors";
 
-export async function getSessionUser(): Promise<SessionUser | null> {
+export async function getSessionUser(options?: { allowPending?: boolean }): Promise<SessionUser | null> {
   let supabase;
   try {
     supabase = await createServerSupabaseClient();
@@ -35,12 +35,15 @@ export async function getSessionUser(): Promise<SessionUser | null> {
   if (!organization) return null;
   const status = String(organization.status ?? "active");
   if (!orgIsUsable(status) && !isPlatformAdminEmail(profile.email as string)) {
-    throw new AuthError(
-      status === "pending_activation"
-        ? "This company is waiting for FuelTrail activation."
-        : "This company has been deactivated.",
-      status === "pending_activation" ? "pending" : "inactive",
-    );
+    const pendingAllowed = options?.allowPending && status === "pending_activation";
+    if (!pendingAllowed) {
+      throw new AuthError(
+        status === "pending_activation"
+          ? "This company is waiting for FuelTrail activation."
+          : "This company has been deactivated.",
+        status === "pending_activation" ? "pending" : "inactive",
+      );
+    }
   }
   await supabase
     .from("profiles")

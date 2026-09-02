@@ -2,8 +2,20 @@
 
 import { redirect } from "next/navigation";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { requireOwner, requireWriteManagement } from "@/lib/auth/session";
+import { assertPlanAllows, PlanLimitError } from "@/lib/billing/assert";
 import { parseReviewRules, serializeReviewRules } from "@/lib/orgs/review-rules";
+
+async function countBillableTrucks(organizationId: string) {
+  const supabase = await createServerSupabaseClient();
+  const { count } = await supabase
+    .from("trucks")
+    .select("*", { count: "exact", head: true })
+    .eq("organization_id", organizationId)
+    .neq("status", "inactive");
+  return count ?? 0;
+}
 
 export async function upsertTruckAction(formData: FormData) {
   const user = await requireWriteManagement();
@@ -26,6 +38,18 @@ export async function upsertTruckAction(formData: FormData) {
     reserve_gallons: Number(formData.get("reserve_gallons")),
     status: String(formData.get("status") || "active"),
   };
+  if (!id) {
+    try {
+      assertPlanAllows(user.organization, "add_truck", {
+        activeTruckCount: await countBillableTrucks(user.organization.id),
+      });
+    } catch (error) {
+      if (error instanceof PlanLimitError) {
+        redirect(`/manage/trucks?error=${encodeURIComponent(error.message)}`);
+      }
+      throw error;
+    }
+  }
   if (id) {
     await supabase.from("trucks").update(payload).eq("id", id);
     await supabase.from("app_audit_events").insert({
@@ -107,6 +131,37 @@ export async function setBaselineAction(formData: FormData) {
   redirect(`/manage/trucks/${truckId}`);
 }
 
+function orgProfilePayload(formData: FormData) {
+  return {
+    name: String(formData.get("name")),
+    base_jurisdiction: String(formData.get("base_jurisdiction") || "") || null,
+    timezone: String(formData.get("timezone")),
+    default_tank_capacity_gallons: Number(formData.get("default_tank_capacity_gallons")),
+    default_target_mpg: Number(formData.get("default_target_mpg")),
+    default_week_start_min_gallons: Number(formData.get("default_week_start_min_gallons")),
+    default_reserve_gallons: Number(formData.get("default_reserve_gallons")),
+    default_cost_per_mile: formData.get("default_cost_per_mile")
+      ? Number(formData.get("default_cost_per_mile"))
+      : null,
+    default_driver_time_value_hourly: formData.get("default_driver_time_value_hourly")
+      ? Number(formData.get("default_driver_time_value_hourly"))
+      : null,
+    comparison_radius_miles: Number(formData.get("comparison_radius_miles") || 15),
+    price_freshness_hours: Number(formData.get("price_freshness_hours") || 72),
+    default_fuel_type: String(formData.get("default_fuel_type") || "diesel"),
+    address: String(formData.get("address") || "") || null,
+    primary_contact_name: String(formData.get("primary_contact_name") || "") || null,
+    primary_contact_email: String(formData.get("primary_contact_email") || "") || null,
+  };
+}
+
+export async function updateOrgProfileAction(formData: FormData) {
+  const user = await requireWriteManagement();
+  const supabase = await createServerSupabaseClient();
+  await supabase.from("organizations").update(orgProfilePayload(formData)).eq("id", user.organization.id);
+  redirect("/manage/settings?saved=1");
+}
+
 export async function updateOrgSettingsAction(formData: FormData) {
   const user = await requireOwner();
   const supabase = await createServerSupabaseClient();
@@ -117,25 +172,7 @@ export async function updateOrgSettingsAction(formData: FormData) {
   await supabase
     .from("organizations")
     .update({
-      name: String(formData.get("name")),
-      base_jurisdiction: String(formData.get("base_jurisdiction") || "") || null,
-      timezone: String(formData.get("timezone")),
-      default_tank_capacity_gallons: Number(formData.get("default_tank_capacity_gallons")),
-      default_target_mpg: Number(formData.get("default_target_mpg")),
-      default_week_start_min_gallons: Number(formData.get("default_week_start_min_gallons")),
-      default_reserve_gallons: Number(formData.get("default_reserve_gallons")),
-      default_cost_per_mile: formData.get("default_cost_per_mile")
-        ? Number(formData.get("default_cost_per_mile"))
-        : null,
-      default_driver_time_value_hourly: formData.get("default_driver_time_value_hourly")
-        ? Number(formData.get("default_driver_time_value_hourly"))
-        : null,
-      comparison_radius_miles: Number(formData.get("comparison_radius_miles") || 15),
-      price_freshness_hours: Number(formData.get("price_freshness_hours") || 72),
-      default_fuel_type: String(formData.get("default_fuel_type") || "diesel"),
-      address: String(formData.get("address") || "") || null,
-      primary_contact_name: String(formData.get("primary_contact_name") || "") || null,
-      primary_contact_email: String(formData.get("primary_contact_email") || "") || null,
+      ...orgProfilePayload(formData),
       retention_years: retention,
       review_rules: serializeReviewRules(
         parseReviewRules({
@@ -150,15 +187,90 @@ export async function updateOrgSettingsAction(formData: FormData) {
   redirect("/manage/settings?saved=1");
 }
 
-export async function toggleUserActiveAction(formData: FormData) {
+export async function updateOrgPolicyAction(formData: FormData) {
   const user = await requireOwner();
   const supabase = await createServerSupabaseClient();
+  const retention = Number(formData.get("retention_years"));
+  if (retention < 4) {
+    redirect("/manage/settings?error=retention");
+  }
+  await supabase
+    .from("organizations")
+    .update({
+      retention_years: retention,
+      review_rules: serializeReviewRules(
+        parseReviewRules({
+          require_odometer: formData.get("require_odometer") === "on",
+          require_receipt_number: formData.get("require_receipt_number") === "on",
+          require_payment_last4: formData.get("require_payment_last4") === "on",
+          require_tank_level: formData.get("require_tank_level") === "on",
+        }),
+      ),
+    })
+    .eq("id", user.organization.id);
+  redirect("/manage/settings?saved=1");
+}
+
+export async function setTruckStatusAction(formData: FormData) {
+  const user = await requireWriteManagement();
+  const supabase = await createServerSupabaseClient();
+  const id = String(formData.get("id"));
+  const status = String(formData.get("status"));
+  if (status !== "active" && status !== "inactive") {
+    redirect(`/manage/trucks/${id}`);
+  }
+  if (status === "active") {
+    try {
+      assertPlanAllows(user.organization, "add_truck", {
+        activeTruckCount: await countBillableTrucks(user.organization.id),
+      });
+    } catch (error) {
+      if (error instanceof PlanLimitError) {
+        redirect(`/manage/trucks?error=${encodeURIComponent(error.message)}`);
+      }
+      throw error;
+    }
+  }
+  if (status === "inactive") {
+    await supabase
+      .from("driver_truck_assignments")
+      .update({ ends_at: new Date().toISOString() })
+      .eq("truck_id", id)
+      .is("ends_at", null);
+  }
+  await supabase.from("trucks").update({ status }).eq("id", id);
+  await supabase.from("app_audit_events").insert({
+    organization_id: user.organization.id,
+    actor_id: user.authUserId,
+    entity_type: "truck",
+    entity_id: id,
+    event_type: status === "inactive" ? "truck_deactivated" : "truck_restored",
+  });
+  redirect(status === "inactive" ? "/manage/trucks" : `/manage/trucks/${id}`);
+}
+
+export async function toggleUserActiveAction(formData: FormData) {
+  const user = await requireWriteManagement();
+  const admin = createServiceRoleClient();
   const id = String(formData.get("id"));
   const next = String(formData.get("is_active")) === "true";
-  if (!next) {
-    const { count } = await supabase
+  const { data: target } = await admin
+    .from("profiles")
+    .select("id, role, organization_id")
+    .eq("id", id)
+    .eq("organization_id", user.organization.id)
+    .single();
+  if (!target) {
+    redirect("/manage/users");
+  }
+  if (user.profile.role === "manager" && target.role !== "driver") {
+    redirect("/manage/users?error=drivers-only");
+  }
+  if (!next && target.role === "owner_admin") {
+    const { count } = await admin
       .from("profiles")
       .select("*", { count: "exact", head: true })
+      .eq("organization_id", user.organization.id)
       .eq("role", "owner_admin")
       .eq("is_active", true)
       .neq("id", id);
@@ -166,8 +278,8 @@ export async function toggleUserActiveAction(formData: FormData) {
       redirect("/manage/users?error=last-owner");
     }
   }
-  await supabase.from("profiles").update({ is_active: next }).eq("id", id);
-  await supabase.from("app_audit_events").insert({
+  await admin.from("profiles").update({ is_active: next }).eq("id", id);
+  await admin.from("app_audit_events").insert({
     organization_id: user.organization.id,
     actor_id: user.authUserId,
     entity_type: "profile",

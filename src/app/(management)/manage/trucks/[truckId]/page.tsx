@@ -5,7 +5,8 @@ import { TruckCharts } from "@/components/management/truck-charts";
 import { Badge, Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/input";
-import { assignDriverAction, setBaselineAction } from "../../actions";
+import { ConfirmSubmit } from "@/components/management/confirm-submit";
+import { assignDriverAction, setBaselineAction, setTruckStatusAction } from "../../actions";
 import { canMutateFleet } from "@/lib/auth/roles";
 import { requireManagement } from "@/lib/auth/session";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
@@ -49,7 +50,28 @@ export default async function TruckDetailPage({ params }: { params: Promise<{ tr
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-semibold">Unit {truck.unit_number}</h1>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <h1 className="text-3xl font-semibold">Unit {truck.unit_number}</h1>
+        {canMutateFleet(user.profile.role) && truck.status !== "inactive" ? (
+          <ConfirmSubmit
+            action={setTruckStatusAction}
+            message={`Remove unit ${truck.unit_number} from the fleet? The truck stays on receipts and can be restored later.`}
+            hidden={{ id: truck.id, status: "inactive" }}
+          >
+            Remove from fleet
+          </ConfirmSubmit>
+        ) : null}
+        {canMutateFleet(user.profile.role) && truck.status === "inactive" ? (
+          <ConfirmSubmit
+            action={setTruckStatusAction}
+            message={`Restore unit ${truck.unit_number} to the active fleet?`}
+            variant="success"
+            hidden={{ id: truck.id, status: "active" }}
+          >
+            Restore
+          </ConfirmSubmit>
+        ) : null}
+      </div>
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
           <EstimatedFuelGauge

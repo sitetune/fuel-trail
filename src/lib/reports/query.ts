@@ -29,7 +29,7 @@ export async function queryFuelReportRows(user: SessionUser, filters: ReportFilt
   }
   if (filters.truckId) query = query.eq("truck_id", filters.truckId);
   if (filters.driverId) query = query.eq("driver_id", filters.driverId);
-  if (filters.jurisdiction) query = query.eq("merchant_region", filters.jurisdiction);
+  if (filters.jurisdiction) query = query.ilike("merchant_region", filters.jurisdiction);
   if (filters.merchant) query = query.ilike("merchant_name", `%${filters.merchant}%`);
   if (filters.fuelType) query = query.eq("fuel_type", filters.fuelType);
   if (filters.report === "reported") query = query.not("last_reported_at", "is", null);

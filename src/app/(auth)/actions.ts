@@ -4,6 +4,8 @@ import { redirect } from "next/navigation";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { rethrowIfNextRedirect } from "@/lib/auth/redirect-error";
 import { AuthError, getSessionUser, redirectForUser } from "@/lib/auth/session";
+import { PLANS } from "@/lib/billing/plans";
+import { createCheckoutSession } from "@/lib/billing/stripe";
 import { createOrganizationAccount, signupSchema } from "@/lib/orgs/signup";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 
@@ -36,9 +38,17 @@ export async function signUpAction(formData: FormData) {
     companyName: formData.get("companyName"),
     timezone: formData.get("timezone") || "America/Chicago",
     baseJurisdiction: String(formData.get("baseJurisdiction") || "").trim() || undefined,
+    plan: String(formData.get("plan") || "") || undefined,
+    period: String(formData.get("period") || "") || undefined,
   });
   if (!parsed.success) {
-    redirect("/signup?error=invalid");
+    const plan = String(formData.get("plan") || "");
+    const period = String(formData.get("period") || "");
+    const retry = new URLSearchParams();
+    retry.set("error", "invalid");
+    if (plan) retry.set("plan", plan);
+    if (period) retry.set("period", period);
+    redirect(`/signup?${retry.toString()}`);
   }
   const admin = createServiceRoleClient();
   const since = new Date(Date.now() - 60 * 60 * 1000).toISOString();
@@ -60,6 +70,19 @@ export async function signUpAction(formData: FormData) {
     email: parsed.data.email,
     password: parsed.data.password,
   });
+  if (created.planId && PLANS[created.planId].selfServe) {
+    try {
+      const session = await createCheckoutSession({
+        organizationId: created.organizationId,
+        email: parsed.data.email,
+        planId: created.planId,
+        interval: created.interval,
+      });
+      if (session.url) redirect(session.url);
+    } catch {
+      redirect("/waiting?error=billing");
+    }
+  }
   redirect(created.status === "active" ? "/manage/setup" : "/waiting");
 }
 

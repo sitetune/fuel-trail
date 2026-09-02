@@ -58,9 +58,11 @@ export default async function ManageDashboardPage() {
         description="Truck-first spend, gallons, and estimated fuel for this month."
         actions={
           <>
-            <Link className="text-sm font-medium text-route" href="/manage/setup">
-              Launch checklist
-            </Link>
+            {user.profile.role === "owner_admin" ? (
+              <Link className="text-sm font-medium text-route" href="/manage/setup">
+                Launch checklist
+              </Link>
+            ) : null}
             <Link className="text-sm font-medium text-route" href="/manage/import">
               Import
             </Link>

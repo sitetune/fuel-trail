@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Bell, House, List, Receipt, Tray, X } from "@phosphor-icons/react";
+import { Bell, House, List, Receipt, Tray, User, X } from "@phosphor-icons/react";
 import { BrandLockup } from "@/components/brand-lockup";
 import { SignOutButton } from "@/components/sign-out-button";
 import { cn } from "@/lib/utils";
@@ -13,21 +13,31 @@ const links = [
   { href: "/driver/receipts", label: "Receipts", icon: Receipt },
   { href: "/driver/queue", label: "Queue", icon: Tray },
   { href: "/driver/notifications", label: "Alerts", icon: Bell },
+  { href: "/driver/profile", label: "Profile", icon: User },
 ];
 
 export function DriverHeader({
   logoUrl,
   unread,
+  userLabel,
 }: {
   logoUrl?: string | null;
   unread: number;
+  userLabel?: string;
 }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   return (
     <header className="bg-ink text-white">
       <div className="flex items-center justify-between gap-3 px-4 py-3">
-        <BrandLockup href="/driver" logoUrl={logoUrl} tone="dark" />
+        <div className="flex min-w-0 items-center gap-3">
+          <BrandLockup href="/driver" logoUrl={logoUrl} tone="dark" />
+          {userLabel ? (
+            <Link href="/driver/profile" className="min-w-0 truncate text-sm font-medium text-warm/90 hover:text-white">
+              {userLabel}
+            </Link>
+          ) : null}
+        </div>
         <button
           type="button"
           className="inline-flex h-11 w-11 items-center justify-center rounded-lg text-white"

@@ -31,6 +31,7 @@ export default async function DriverLayout({ children }: { children: ReactNode }
       <DriverHeader
         logoUrl={user.organization.logo_path ? "/api/org/logo" : null}
         unread={count ?? 0}
+        userLabel={user.profile.full_name ?? user.profile.email}
       />
       <main id="main" className="flex-1 px-4 py-5">
         {children}

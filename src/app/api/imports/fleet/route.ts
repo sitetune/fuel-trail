@@ -2,6 +2,7 @@ import { z } from "zod";
 import { canMutateFleet } from "@/lib/auth/roles";
 import { AuthError, requireManagement } from "@/lib/auth/session";
 import { apiError, apiOk } from "@/lib/api/http";
+import { assertPlanAllows, PlanLimitError } from "@/lib/billing/assert";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { FLEET_IMPORT_KINDS, previewFleetCsv, type FleetImportKind } from "@/lib/imports/fleet";
@@ -43,6 +44,17 @@ export async function POST(request: Request) {
       .filter((row) => row.error)
       .map((row) => ({ rowNumber: row.rowNumber, message: row.error }));
     const supabase = await createServerSupabaseClient();
+    if (commit && kind === "trucks") {
+      const { count } = await supabase
+        .from("trucks")
+        .select("*", { count: "exact", head: true })
+        .eq("organization_id", user.organization.id)
+        .neq("status", "inactive");
+      assertPlanAllows(user.organization, "add_truck", {
+        activeTruckCount: count ?? 0,
+        addCount: valid.length,
+      });
+    }
     const { data: job } = await supabase
       .from("import_jobs")
       .insert({
@@ -118,6 +130,9 @@ export async function POST(request: Request) {
       preview: preview.rows.slice(0, 25),
     });
   } catch (error) {
+    if (error instanceof PlanLimitError) {
+      return apiError(403, error.code, error.message);
+    }
     if (error instanceof AuthError) {
       return apiError(error.code === "unauthenticated" ? 401 : 403, error.code, error.message);
     }

@@ -1,6 +1,7 @@
 import { UsersManager } from "@/components/management/users-manager";
 import { CsvTemplateDownloads } from "@/components/management/csv-template-downloads";
 import { Button } from "@/components/ui/button";
+import { canInvitePeople, canManageUsers } from "@/lib/auth/roles";
 import { requireManagement } from "@/lib/auth/session";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import Link from "next/link";
@@ -60,9 +61,16 @@ export default async function UsersPage({
         receipt_count: counts.get(person.id) ?? 0,
       }))}
       trucks={trucks ?? []}
-      canInvite={user.profile.role === "owner_admin"}
+      canInvite={canInvitePeople(user.profile.role)}
       canAssign={user.profile.role === "owner_admin" || user.profile.role === "manager"}
-      error={params.error === "last-owner" ? "Cannot deactivate or demote the last active owner." : undefined}
+      canEditAny={canManageUsers(user.profile.role)}
+      error={
+        params.error === "last-owner"
+          ? "Cannot deactivate or demote the last active owner."
+          : params.error === "drivers-only"
+            ? "Managers can deactivate drivers only."
+            : undefined
+      }
     />
     </div>
   );

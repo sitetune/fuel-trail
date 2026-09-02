@@ -2,14 +2,17 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input, Label, FieldError } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
+import { parseBillingInterval, parsePlanId, PLANS } from "@/lib/billing/plans";
 import { signUpAction } from "../actions";
 
 export default async function SignupPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; plan?: string; period?: string }>;
 }) {
   const params = await searchParams;
+  const plan = parsePlanId(params.plan);
+  const interval = parseBillingInterval(params.period);
   const message =
     params.error === "invalid"
       ? "Check the company name, email, and a password of at least 10 characters."
@@ -24,9 +27,14 @@ export default async function SignupPage({
         <h1 className="font-display text-2xl font-semibold tracking-tight">Create your company</h1>
         <p className="mt-1 text-sm text-muted">
           Start a FuelTrail workspace for drivers, trucks, and receipt audit.
+          {plan
+            ? ` ${PLANS[plan].name}${PLANS[plan].selfServe ? ` · ${interval === "year" ? "annual" : "monthly"}` : ""}.`
+            : ""}
         </p>
       </div>
       <form action={signUpAction} className="space-y-3">
+        {params.plan ? <input type="hidden" name="plan" value={params.plan} /> : null}
+        {params.period ? <input type="hidden" name="period" value={params.period} /> : null}
         <div className="space-y-1.5">
           <Label htmlFor="companyName">Company name</Label>
           <Input id="companyName" name="companyName" required />

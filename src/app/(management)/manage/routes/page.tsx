@@ -1,11 +1,19 @@
 import { FuelStopsWorkspace } from "@/components/fuel-planning/fuel-stops-workspace";
 import { PageHeader } from "@/components/ui/page-header";
+import { UpgradeNotice } from "@/components/billing/upgrade-notice";
 import { canMutateFleet } from "@/lib/auth/roles";
+import { assertPlanAllows, PlanLimitError } from "@/lib/billing/assert";
 import { requireManagement } from "@/lib/auth/session";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 export default async function RoutesPage() {
   const user = await requireManagement();
+  try {
+    assertPlanAllows(user.organization, "fuel_stops");
+  } catch (error) {
+    if (error instanceof PlanLimitError) return <UpgradeNotice message={error.message} />;
+    throw error;
+  }
   const supabase = await createServerSupabaseClient();
   const { data: trucks } = await supabase.from("trucks").select("id, unit_number").eq("status", "active");
   const { data: assignments } = await supabase

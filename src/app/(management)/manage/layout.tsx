@@ -34,9 +34,10 @@ export default async function ManageLayout({ children }: { children: ReactNode }
   }
   if (!user) redirect("/login");
   void notifyAgingReceipts(user.organization.id);
+  const visible = links.filter((link) => link.href !== "/manage/setup" || user.profile.role === "owner_admin");
   const nav = isPlatformAdminEmail(user.profile.email)
-    ? [...links, { href: "/internal", label: "Admin" }]
-    : links;
+    ? [...visible, { href: "/internal", label: "Admin" }]
+    : visible;
   return (
     <div className="min-h-[100dvh] bg-warm lg:flex">
       <ServiceWorkerRegister />
@@ -46,6 +47,7 @@ export default async function ManageLayout({ children }: { children: ReactNode }
         logoUrl={user.organization.logo_path ? "/api/org/logo" : null}
         auditor={user.profile.role === "auditor"}
         userLabel={user.profile.full_name ?? user.profile.email}
+        profileHref="/manage/profile"
       />
       <div className="min-w-0 flex-1">
         <div className="hidden h-14 items-center justify-end border-b border-steel/25 bg-white px-6 lg:flex">

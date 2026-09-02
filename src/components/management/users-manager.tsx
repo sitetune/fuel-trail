@@ -19,17 +19,26 @@ export type ManagedUser = {
   receipt_count?: number;
 };
 
+const ROLE_LABELS: Record<string, string> = {
+  owner_admin: "Owner",
+  manager: "Manager",
+  auditor: "Auditor",
+  driver: "Driver",
+};
+
 export function UsersManager({
   users,
   trucks,
   canInvite,
   canAssign,
+  canEditAny,
   error,
 }: {
   users: ManagedUser[];
   trucks: Array<{ id: string; unit_number: string }>;
   canInvite: boolean;
   canAssign?: boolean;
+  canEditAny?: boolean;
   error?: string;
 }) {
   const [message, setMessage] = useState(error ?? "");
@@ -41,56 +50,136 @@ export function UsersManager({
     if (statusFilter === "inactive" && person.is_active) return false;
     return true;
   });
+  const inviteRoles = canEditAny
+    ? [
+        ["driver", "Driver"],
+        ["manager", "Manager"],
+        ["auditor", "Auditor"],
+        ["owner_admin", "Owner"],
+      ]
+    : [["driver", "Driver"]];
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-semibold">Users</h1>
-        <p className="text-sm text-muted">Deactivate instead of deleting anyone with receipt history.</p>
-      </div>
       {message ? <p className="text-sm">{message}</p> : null}
+      {canInvite ? (
+        <Card>
+          <h2 className="mb-3 font-semibold">Invite user</h2>
+          <p className="mb-3 text-sm text-muted">
+            {canEditAny ? "Owners can invite any role." : "Managers can invite and deactivate drivers."}
+          </p>
+          <form
+            className="grid gap-3 sm:grid-cols-2"
+            onSubmit={async (event) => {
+              event.preventDefault();
+              const form = new FormData(event.currentTarget);
+              const response = await fetch("/api/admin/invite-user", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  email: form.get("email"),
+                  fullName: form.get("fullName"),
+                  role: form.get("role") || "driver",
+                  truckId: form.get("truckId") || undefined,
+                }),
+              });
+              const payload = (await response.json().catch(() => null)) as
+                | { error?: { message?: string } }
+                | { data?: unknown }
+                | null;
+              setMessage(
+                response.ok
+                  ? "Invite sent."
+                  : payload && "error" in payload
+                    ? (payload.error?.message ?? "Invite failed.")
+                    : "Invite failed.",
+              );
+              if (response.ok) event.currentTarget.reset();
+            }}
+          >
+            <div className="space-y-1.5">
+              <Label htmlFor="fullName">Name</Label>
+              <Input id="fullName" name="fullName" required />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="email">Email</Label>
+              <Input id="email" name="email" type="email" required />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="role">Role</Label>
+              <select id="role" name="role" className="h-11 w-full rounded-md border px-3" defaultValue="driver">
+                {inviteRoles.map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="truckId">Assign truck (drivers)</Label>
+              <select id="truckId" name="truckId" className="h-11 w-full rounded-md border px-3">
+                <option value="">None</option>
+                {trucks.map((truck) => (
+                  <option key={truck.id} value={truck.id}>
+                    Unit {truck.unit_number}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="sm:col-span-2">
+              <Button type="submit" variant="primary">
+                Send invite
+              </Button>
+            </div>
+          </form>
+        </Card>
+      ) : null}
       <div className="flex flex-wrap gap-3">
         <select className="h-11 rounded-md border px-3" value={roleFilter} onChange={(event) => setRoleFilter(event.target.value)}>
           <option value="all">All roles</option>
-          <option value="owner_admin">owner</option>
-          <option value="manager">manager</option>
-          <option value="auditor">auditor</option>
-          <option value="driver">driver</option>
+          <option value="owner_admin">Owner</option>
+          <option value="manager">Manager</option>
+          <option value="auditor">Auditor</option>
+          <option value="driver">Driver</option>
         </select>
         <select className="h-11 rounded-md border px-3" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
           <option value="all">All statuses</option>
-          <option value="active">active</option>
-          <option value="inactive">deactivated</option>
+          <option value="active">Active</option>
+          <option value="inactive">Deactivated</option>
         </select>
       </div>
-      <div className="grid gap-6 lg:grid-cols-2">
-        <div className="space-y-3">
-          {filtered.map((person) => (
+      <div className="space-y-3">
+        {filtered.map((person) => {
+          const canEditThis = canEditAny || (canInvite && person.role === "driver");
+          return (
             <Card key={person.id} className="space-y-3">
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <p className="font-semibold">{person.full_name}</p>
                   <p className="text-sm text-muted">
-                    {person.email} · {person.role}
+                    {person.email}
                     {person.assigned_unit ? ` · Unit ${person.assigned_unit}` : ""}
+                    {` · ${person.receipt_count ?? 0} receipts`}
                   </p>
                   <p className="text-xs text-muted">
-                    Last seen {person.last_seen_at ? new Date(person.last_seen_at).toLocaleString() : "never"} ·{" "}
-                    {person.receipt_count ?? 0} receipts
+                    Last seen {person.last_seen_at ? new Date(person.last_seen_at).toLocaleString() : "never"}
                   </p>
                 </div>
-                <Badge tone={person.is_active ? "success" : "neutral"}>{person.is_active ? "active" : "deactivated"}</Badge>
+                <div className="flex flex-wrap items-center justify-end gap-2">
+                  <Badge tone="neutral">{ROLE_LABELS[person.role] ?? person.role}</Badge>
+                  <Badge tone={person.is_active ? "success" : "neutral"}>{person.is_active ? "Active" : "Deactivated"}</Badge>
+                </div>
               </div>
-              {canInvite ? (
+              {canEditAny ? (
                 <form action={updateUserAction} className="grid gap-2 sm:grid-cols-2">
                   <input type="hidden" name="id" value={person.id} />
                   <Input name="full_name" defaultValue={person.full_name} aria-label="Name" />
                   <Input name="phone" defaultValue={person.phone ?? ""} placeholder="Phone" aria-label="Phone" />
                   <select name="role" className="h-11 rounded-md border px-3" defaultValue={person.role}>
-                    <option value="driver">driver</option>
-                    <option value="manager">manager</option>
-                    <option value="auditor">auditor</option>
-                    <option value="owner_admin">owner_admin</option>
+                    <option value="driver">Driver</option>
+                    <option value="manager">Manager</option>
+                    <option value="auditor">Auditor</option>
+                    <option value="owner_admin">Owner</option>
                   </select>
                   <Button type="submit" variant="outline" size="sm">
                     Save profile
@@ -98,12 +187,12 @@ export function UsersManager({
                 </form>
               ) : null}
               <div className="flex flex-wrap gap-2">
-                {canInvite ? (
+                {canEditThis ? (
                   <form action={toggleUserActiveAction}>
                     <input type="hidden" name="id" value={person.id} />
                     <input type="hidden" name="is_active" value={person.is_active ? "false" : "true"} />
                     <Button type="submit" variant={person.is_active ? "danger" : "success"} size="sm">
-                      {person.is_active ? "Deactivate" : "Activate"}
+                      {person.is_active ? "Deactivate" : "Reactivate"}
                     </Button>
                   </form>
                 ) : null}
@@ -149,55 +238,8 @@ export function UsersManager({
                 ) : null}
               </div>
             </Card>
-          ))}
-        </div>
-        {canInvite ? (
-          <Card>
-            <h2 className="mb-3 font-semibold">Invite user</h2>
-            <form
-              className="space-y-3"
-              onSubmit={async (event) => {
-                event.preventDefault();
-                const form = new FormData(event.currentTarget);
-                const response = await fetch("/api/admin/invite-user", {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({
-                    email: form.get("email"),
-                    fullName: form.get("fullName"),
-                    role: form.get("role"),
-                    truckId: form.get("truckId") || undefined,
-                  }),
-                });
-                setMessage(response.ok ? "Invite sent." : "Invite failed.");
-              }}
-            >
-              <Label htmlFor="fullName">Name</Label>
-              <Input id="fullName" name="fullName" required />
-              <Label htmlFor="email">Email</Label>
-              <Input id="email" name="email" type="email" required />
-              <Label htmlFor="role">Role</Label>
-              <select id="role" name="role" className="h-11 w-full rounded-md border px-3">
-                <option value="driver">driver</option>
-                <option value="manager">manager</option>
-                <option value="auditor">auditor</option>
-                <option value="owner_admin">owner_admin</option>
-              </select>
-              <Label htmlFor="truckId">Assign truck (drivers)</Label>
-              <select id="truckId" name="truckId" className="h-11 w-full rounded-md border px-3">
-                <option value="">None</option>
-                {trucks.map((truck) => (
-                  <option key={truck.id} value={truck.id}>
-                    Unit {truck.unit_number}
-                  </option>
-                ))}
-              </select>
-              <Button type="submit" variant="primary" className="w-full">
-                Send invite
-              </Button>
-            </form>
-          </Card>
-        ) : null}
+          );
+        })}
       </div>
     </div>
   );

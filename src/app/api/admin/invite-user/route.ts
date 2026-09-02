@@ -1,12 +1,13 @@
 import { z } from "zod";
-import { AuthError, requireOwner } from "@/lib/auth/session";
+import { AuthError, requireWriteManagement } from "@/lib/auth/session";
 import { apiError, apiOk } from "@/lib/api/http";
 import { enforceRateLimit } from "@/lib/api/rate-limit";
+import { assertPlanAllows, PlanLimitError } from "@/lib/billing/assert";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 const bodySchema = z.object({
-    email: z.email(),
+  email: z.email(),
   fullName: z.string().min(1),
   role: z.enum(["owner_admin", "manager", "auditor", "driver"]),
   truckId: z.string().uuid().optional(),
@@ -14,7 +15,7 @@ const bodySchema = z.object({
 
 export async function POST(request: Request) {
   try {
-    const user = await requireOwner();
+    const user = await requireWriteManagement();
     const limited = await enforceRateLimit({
       bucket: "invite",
       userId: user.authUserId,
@@ -22,11 +23,23 @@ export async function POST(request: Request) {
     });
     if (limited) return limited;
     const body = bodySchema.parse(await request.json());
+    const role = user.profile.role === "manager" ? "driver" : body.role;
+    if (user.profile.role === "manager" && body.role !== "driver") {
+      return apiError(403, "forbidden", "Managers can invite drivers only.");
+    }
+    try {
+      assertPlanAllows(user.organization, role === "auditor" ? "invite_auditor" : "invite_user");
+    } catch (error) {
+      if (error instanceof PlanLimitError) {
+        return apiError(403, error.code, error.message);
+      }
+      throw error;
+    }
     const admin = createServiceRoleClient();
     const { data, error } = await admin.auth.admin.inviteUserByEmail(body.email, {
       data: {
         full_name: body.fullName,
-        role: body.role,
+        role,
         organization_id: user.organization.id,
       },
       redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/confirm`,
@@ -40,10 +53,10 @@ export async function POST(request: Request) {
       organization_id: user.organization.id,
       full_name: body.fullName,
       email: body.email,
-      role: body.role,
+      role,
       is_active: true,
     });
-    if (body.role === "driver" && body.truckId) {
+    if (role === "driver" && body.truckId) {
       await admin.from("driver_truck_assignments").update({ ends_at: new Date().toISOString() })
         .eq("truck_id", body.truckId)
         .is("ends_at", null);
@@ -60,7 +73,7 @@ export async function POST(request: Request) {
       entity_type: "profile",
       entity_id: data.user.id,
       event_type: "user_invited",
-      metadata: { email: body.email, role: body.role },
+      metadata: { email: body.email, role },
     });
     return apiOk({ userId: data.user.id }, 201);
   } catch (error) {

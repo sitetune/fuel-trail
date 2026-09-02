@@ -1,4 +1,6 @@
 import { Card } from "@/components/ui/card";
+import { UpgradeNotice } from "@/components/billing/upgrade-notice";
+import { assertPlanAllows, PlanLimitError } from "@/lib/billing/assert";
 import { requireManagement } from "@/lib/auth/session";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { filterStationsWithinRadius, isPriceFresh, observePurchaseSavings } from "@/lib/routing/savings";
@@ -7,6 +9,12 @@ import { PriceImportForm } from "@/components/fuel-planning/price-import-form";
 
 export default async function SavingsPage() {
   const user = await requireManagement();
+  try {
+    assertPlanAllows(user.organization, "savings");
+  } catch (error) {
+    if (error instanceof PlanLimitError) return <UpgradeNotice message={error.message} />;
+    throw error;
+  }
   const supabase = await createServerSupabaseClient();
   const radiusMiles = Number(user.organization.comparison_radius_miles ?? 15);
   const freshnessHours = Number(user.organization.price_freshness_hours ?? 72);

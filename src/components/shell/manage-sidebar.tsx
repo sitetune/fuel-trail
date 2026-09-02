@@ -51,11 +51,13 @@ export function ManageSidebar({
   logoUrl,
   auditor,
   userLabel,
+  profileHref = "/manage/profile",
 }: {
   links: ManageNavLink[];
   logoUrl?: string | null;
   auditor?: boolean;
   userLabel: string;
+  profileHref?: string;
 }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
@@ -85,7 +87,9 @@ export function ManageSidebar({
         </p>
       ) : null}
       <div className="flex items-center justify-between gap-2 border-t border-steel/25 px-3 py-3">
-        <p className="truncate text-xs font-medium text-muted">{userLabel}</p>
+        <Link href={profileHref} className="truncate text-xs font-medium text-muted hover:text-ink">
+          {userLabel}
+        </Link>
         <SignOutButton />
       </div>
     </div>

@@ -1,4 +1,4 @@
-import { AuthError, requireOwner, requireSession } from "@/lib/auth/session";
+import { AuthError, requireSession, requireWriteManagement } from "@/lib/auth/session";
 import { apiError } from "@/lib/api/http";
 import { assertStoragePathForOrg } from "@/lib/auth/isolation";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
@@ -31,7 +31,7 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    const user = await requireOwner();
+    const user = await requireWriteManagement();
     const form = await request.formData();
     const file = form.get("file");
     if (!(file instanceof File)) return apiError(400, "invalid_input", "Upload a PNG, JPEG, or WebP logo.");

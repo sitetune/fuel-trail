@@ -59,7 +59,7 @@ export default async function HomePage() {
               </p>
               <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
                 <Button asChild size="lg" variant="primary" className="w-full sm:w-auto">
-                  <Link href="/signup">Get started</Link>
+                  <Link href="/signup?plan=growth">Get started</Link>
                 </Button>
                 <Button
                   asChild
@@ -115,13 +115,26 @@ export default async function HomePage() {
       </main>
 
       <footer id="resources" className="border-t border-white/10">
-        <div className="mx-auto flex max-w-6xl flex-col gap-4 px-4 py-10 sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8">
-          <p className="text-sm text-steel">Originals stay private. OCR is an assistant, not the record.</p>
-          <div className="flex gap-5 text-sm">
-            <Link href="/login" className="font-medium text-warm/90 hover:text-white">
+        <div className="mx-auto grid max-w-6xl gap-8 px-4 py-12 sm:grid-cols-3 sm:px-6 lg:px-8">
+          <div>
+            <p className="text-[11px] font-semibold tracking-[0.18em] text-route uppercase">Resources</p>
+            <p className="mt-3 text-sm leading-relaxed text-steel">
+              Originals stay private. OCR is an assistant, not the record.
+            </p>
+          </div>
+          <div className="space-y-2 text-sm">
+            <p className="font-semibold text-warm">Support</p>
+            <a className="block text-steel hover:text-white" href="mailto:hello@fueltrail.app">
+              hello@fueltrail.app
+            </a>
+            <Link className="block text-steel hover:text-white" href="/login">
               Sign in
             </Link>
-            <Link href="/signup" className="font-medium text-route hover:text-sky">
+          </div>
+          <div className="space-y-2 text-sm">
+            <p className="font-semibold text-warm">Legal</p>
+            <p className="text-steel">Receipt images stay in your company workspace.</p>
+            <Link className="block font-medium text-route hover:text-sky" href="/signup?plan=growth">
               Get started
             </Link>
           </div>

@@ -1,12 +1,19 @@
 import Link from "next/link";
-import { requireOwner } from "@/lib/auth/session";
+import { redirect } from "next/navigation";
+import { requireManagement } from "@/lib/auth/session";
 import { loadLaunchChecklist } from "@/lib/orgs/checklist";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { CsvTemplateDownloads } from "@/components/management/csv-template-downloads";
 
-export default async function SetupPage() {
-  const user = await requireOwner();
+export default async function SetupPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ billing?: string }>;
+}) {
+  const user = await requireManagement();
+  if (user.profile.role !== "owner_admin") redirect("/manage/settings");
+  const params = await searchParams;
   const checklist = await loadLaunchChecklist(user);
   const items = [
     { ok: checklist.companyDetails, label: "Company details", href: "/manage/settings" },
@@ -22,6 +29,9 @@ export default async function SetupPage() {
         <p className="text-sm text-muted">
           Finish these items before asking drivers to use FuelTrail. You can keep working from the rest of Manage at any time.
         </p>
+        {params.billing === "ok" ? (
+          <p className="mt-2 text-sm text-success">Payment received. Your company is active.</p>
+        ) : null}
       </div>
       <Card className="space-y-3">
         {items.map((item) => (

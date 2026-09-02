@@ -1,4 +1,5 @@
 import type { FuelPeriod } from "@/lib/calculations/dates";
+import { normalizeJurisdiction } from "./jurisdiction";
 
 export type ReportFilters = {
   from?: string | null;
@@ -21,8 +22,8 @@ export function parseReportFilters(url: URL): ReportFilters {
     to: url.searchParams.get("to"),
     truckId: url.searchParams.get("truckId"),
     driverId: url.searchParams.get("driverId"),
-    merchant: url.searchParams.get("merchant"),
-    jurisdiction: url.searchParams.get("jurisdiction") ?? url.searchParams.get("region"),
+    merchant: url.searchParams.get("merchant")?.trim() || null,
+    jurisdiction: normalizeJurisdiction(url.searchParams.get("jurisdiction") ?? url.searchParams.get("region")),
     status: url.searchParams.get("status"),
     fuelType: url.searchParams.get("fuelType"),
     report: report === "reported" || report === "unreported" ? report : null,

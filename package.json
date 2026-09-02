@@ -53,6 +53,7 @@
     "recharts": "^3.10.1",
     "sharp": "^0.35.3",
     "sonner": "^2.0.8",
+    "stripe": "^22.6.1",
     "tailwind-merge": "^3.6.0",
     "tesseract.js": "^7.0.0",
     "zod": "^4.4.3"

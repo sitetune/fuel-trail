@@ -12,8 +12,16 @@ export function canManageUsers(role: Role): boolean {
   return role === "owner_admin";
 }
 
+export function canInvitePeople(role: Role): boolean {
+  return role === "owner_admin" || role === "manager";
+}
+
 export function canManageOrgSettings(role: Role): boolean {
   return role === "owner_admin";
+}
+
+export function canManageOrgProfile(role: Role): boolean {
+  return role === "owner_admin" || role === "manager";
 }
 
 export function canVerifyReceipts(role: Role): boolean {

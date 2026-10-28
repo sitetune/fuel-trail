@@ -1,5 +1,6 @@
 import { FleetImportForm } from "@/components/management/fleet-import-form";
 import { CsvTemplateDownloads } from "@/components/management/csv-template-downloads";
+import { ImportFieldGuide } from "@/components/management/import-field-guide";
 import { Card } from "@/components/ui/card";
 import { canMutateFleet } from "@/lib/auth/roles";
 import { requireManagement } from "@/lib/auth/session";
@@ -29,6 +30,7 @@ export default async function ImportCenterPage() {
         <h2 className="font-semibold">CSV templates</h2>
         <CsvTemplateDownloads />
       </Card>
+      <ImportFieldGuide />
       <div className="grid gap-6 lg:grid-cols-2">
         <FleetImportForm
           savedMappings={(mappings ?? []).map((row) => ({

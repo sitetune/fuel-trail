@@ -5,7 +5,14 @@ describe("parseReportFilters", () => {
   it("defaults to monthly and treats empty query as inactive", () => {
     const filters = parseReportFilters(new URL("https://fueltrail.local/manage/reports"));
     expect(filters.period).toBe("month");
+    expect(filters.range).toBe("all");
     expect(reportFiltersAreActive(filters)).toBe(false);
+  });
+
+  it("reads a named range preset", () => {
+    const filters = parseReportFilters(new URL("https://fueltrail.local/manage/reports?range=last_month"));
+    expect(filters.range).toBe("last_month");
+    expect(reportFiltersAreActive(filters)).toBe(true);
   });
 
   it("uppercases and maps state names", () => {

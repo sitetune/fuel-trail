@@ -3,6 +3,7 @@ import type { SessionUser } from "@/types/domain";
 import type { FuelReportRow } from "@/lib/reports/ifta";
 import { inclusiveDateRangeIso } from "@/lib/calculations/dates";
 import { type ReportFilters } from "@/lib/reports/filters";
+import { reportRangeBounds } from "@/lib/reports/ranges";
 
 export type { ReportFilters } from "@/lib/reports/filters";
 export { parseReportFilters, reportFiltersAreActive } from "@/lib/reports/filters";
@@ -16,15 +17,18 @@ export async function queryFuelReportRows(user: SessionUser, filters: ReportFilt
   if (filters.status) {
     query = query.eq("status", filters.status);
   } else {
-    query = query.in("status", ["submitted", "verified"]);
+    query = query.in("status", ["needs_review", "submitted", "verified"]);
   }
   const timezone = user.organization.timezone || "America/Chicago";
-  if (filters.from) {
-    const range = inclusiveDateRangeIso(filters.from, filters.to ?? null, timezone);
+  const preset = !filters.from && !filters.to ? reportRangeBounds(filters.range, timezone) : null;
+  const from = filters.from || preset?.from || null;
+  const to = filters.to || preset?.to || null;
+  if (from) {
+    const range = inclusiveDateRangeIso(from, to, timezone);
     query = query.gte("purchased_at", range.startIso);
     if (range.endExclusiveIso) query = query.lt("purchased_at", range.endExclusiveIso);
-  } else if (filters.to) {
-    const range = inclusiveDateRangeIso("1970-01-01", filters.to, timezone);
+  } else if (to) {
+    const range = inclusiveDateRangeIso("1970-01-01", to, timezone);
     if (range.endExclusiveIso) query = query.lt("purchased_at", range.endExclusiveIso);
   }
   if (filters.truckId) query = query.eq("truck_id", filters.truckId);

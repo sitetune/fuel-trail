@@ -27,3 +27,27 @@ export async function sendNotificationEmail(input: {
   });
   return response.ok ? ("sent" as const) : ("failed" as const);
 }
+
+export async function sendInviteEmail(input: {
+  to: string;
+  fullName: string;
+  organizationName: string;
+  actionLink: string;
+}) {
+  const env = getServerEnv();
+  if (!env.RESEND_API_KEY || !env.RESEND_FROM_EMAIL) return "skipped" as const;
+  const response = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${env.RESEND_API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      from: env.RESEND_FROM_EMAIL,
+      to: [input.to],
+      subject: `${brand.name}: you're invited to ${input.organizationName}`,
+      text: `Hi ${input.fullName},\n\nSet your password to join ${input.organizationName} on ${brand.name}:\n${input.actionLink}\n`,
+    }),
+  });
+  return response.ok ? ("sent" as const) : ("failed" as const);
+}

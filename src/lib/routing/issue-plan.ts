@@ -7,6 +7,7 @@ import {
   resolveDriverFuelStop,
   type DriverFuelStopPlan,
 } from "@/lib/routing/driver-stop";
+import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import type { SessionUser } from "@/types/domain";
 
@@ -79,5 +80,40 @@ export async function issueRoutePlanToDriver(user: SessionUser, planId: string, 
     resend,
   });
   if (!result.notified) return { ok: false as const, message: result.reason ?? "Could not notify the driver." };
+  return { ok: true as const };
+}
+
+const ISSUED_STOP_TTL_MS = 24 * 60 * 60 * 1000;
+
+export async function expireStaleIssuedPlans(organizationId: string) {
+  const admin = createServiceRoleClient();
+  const cutoff = new Date(Date.now() - ISSUED_STOP_TTL_MS).toISOString();
+  await admin
+    .from("route_plans")
+    .update({ status: "cancelled" })
+    .eq("organization_id", organizationId)
+    .eq("status", "issued")
+    .lt("updated_at", cutoff);
+}
+
+export async function cancelRoutePlan(user: SessionUser, planId: string) {
+  const admin = createServiceRoleClient();
+  const { data: plan } = await admin
+    .from("route_plans")
+    .select("id, driver_id, status")
+    .eq("id", planId)
+    .eq("organization_id", user.organization.id)
+    .maybeSingle();
+  if (!plan) return { ok: false as const, message: "Plan not found." };
+  const isManager = user.profile.role === "owner_admin" || user.profile.role === "manager";
+  const isAssignedDriver = user.profile.role === "driver" && plan.driver_id === user.authUserId;
+  if (!isManager && !isAssignedDriver) {
+    return { ok: false as const, message: "You cannot remove this fuel stop." };
+  }
+  await admin
+    .from("route_plans")
+    .update({ status: "cancelled" })
+    .eq("id", planId)
+    .eq("organization_id", user.organization.id);
   return { ok: true as const };
 }

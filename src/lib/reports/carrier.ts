@@ -7,7 +7,7 @@ export type CarrierReportRow = {
   receipts: number;
 };
 
-export function groupByCarrier(rows: FuelReportRow[]): CarrierReportRow[] {
+export function groupByMerchant(rows: FuelReportRow[]): CarrierReportRow[] {
   const map = new Map<string, CarrierReportRow>();
   for (const row of rows) {
     const merchant = row.merchantName?.trim() || "Unknown";
@@ -19,3 +19,5 @@ export function groupByCarrier(rows: FuelReportRow[]): CarrierReportRow[] {
   }
   return [...map.values()].sort((a, b) => b.spend - a.spend || a.merchant.localeCompare(b.merchant));
 }
+
+export const groupByCarrier = groupByMerchant;

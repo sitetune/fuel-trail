@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { MappedFuelStop } from "@/lib/routing/osm-stops";
 import { cn } from "@/lib/utils";
 import "leaflet/dist/leaflet.css";
@@ -24,6 +24,7 @@ export function FuelStopMap({
   const mapRef = useRef<LeafletMap | null>(null);
   const layerRef = useRef<import("leaflet").LayerGroup | null>(null);
   const onMapClickRef = useRef(onMapClick);
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
     onMapClickRef.current = onMapClick;
@@ -42,10 +43,12 @@ export function FuelStopMap({
       layerRef.current = L.layerGroup().addTo(map);
       map.on("click", (event) => onMapClickRef.current(event.latlng.lat, event.latlng.lng));
       mapRef.current = map;
+      if (!cancelled) setReady(true);
     };
     void setup();
     return () => {
       cancelled = true;
+      setReady(false);
       mapRef.current?.remove();
       mapRef.current = null;
       layerRef.current = null;
@@ -62,7 +65,7 @@ export function FuelStopMap({
     const update = async () => {
       const map = mapRef.current;
       const layer = layerRef.current;
-      if (!map || !layer) return;
+      if (!ready || !map || !layer) return;
       const L = await import("leaflet");
       layer.clearLayers();
       for (const stop of stops) {
@@ -83,7 +86,7 @@ export function FuelStopMap({
       }
     };
     void update();
-  }, [onSelect, selectedId, stops]);
+  }, [onSelect, ready, selectedId, stops]);
 
   return (
     <div

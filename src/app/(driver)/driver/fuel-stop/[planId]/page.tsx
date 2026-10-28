@@ -4,6 +4,7 @@ import { FuelStopAssignment } from "@/components/driver/fuel-stop-assignment";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { requireSession } from "@/lib/auth/session";
+import { expireStaleIssuedPlans } from "@/lib/routing/issue-plan";
 import { DRIVER_FUEL_STOP_SELECT, enrichDriverFuelStop, resolveDriverFuelStop } from "@/lib/routing/driver-stop";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
@@ -11,6 +12,7 @@ export default async function DriverFuelStopPage({ params }: { params: Promise<{
   const user = await requireSession();
   if (user.profile.role !== "driver") redirect("/manage");
   const { planId } = await params;
+  await expireStaleIssuedPlans(user.organization.id);
   const supabase = await createServerSupabaseClient();
   const { data: plan } = await supabase
     .from("route_plans")

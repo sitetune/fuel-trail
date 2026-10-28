@@ -6,6 +6,7 @@ import { assertPlanAllows, PlanLimitError } from "@/lib/billing/assert";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { FLEET_IMPORT_KINDS, previewFleetCsv, type FleetImportKind } from "@/lib/imports/fleet";
+import { inviteOrganizationUser } from "@/lib/orgs/invite";
 import { managementRecipientIds, notify } from "@/lib/notifications";
 import { enforceRateLimit } from "@/lib/api/rate-limit";
 
@@ -78,6 +79,7 @@ export async function POST(request: Request) {
       try {
         imported = await commitFleetImport({
           organizationId: user.organization.id,
+          organizationName: user.organization.name,
           actorId: user.authUserId,
           kind,
           valid,
@@ -142,6 +144,7 @@ export async function POST(request: Request) {
 
 async function commitFleetImport(input: {
   organizationId: string;
+  organizationName: string;
   actorId: string;
   kind: FleetImportKind;
   valid: Array<{ normalized: Record<string, unknown> | null }>;
@@ -218,28 +221,22 @@ async function commitFleetImport(input: {
         continue;
       }
       if (!input.sendInvites) continue;
-      const { data, error } = await admin.auth.admin.inviteUserByEmail(email, {
-        data: {
-          full_name: driver.full_name,
+      try {
+        const invited = await inviteOrganizationUser({
+          email,
+          fullName: String(driver.full_name),
           role: "driver",
-          organization_id: input.organizationId,
-        },
-        redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/confirm`,
-      });
-      if (error || !data.user) continue;
-      await admin.from("profiles").upsert({
-        id: data.user.id,
-        organization_id: input.organizationId,
-        full_name: driver.full_name,
-        email,
-        phone: emptyToNull(driver.phone),
-        role: "driver",
-        is_active: true,
-      });
-      if (driver.unit_number) {
-        await assignByUnit(admin, input.organizationId, data.user.id, String(driver.unit_number), input.actorId);
+          organizationId: input.organizationId,
+          organizationName: input.organizationName,
+          phone: emptyToNull(driver.phone),
+        });
+        if (driver.unit_number) {
+          await assignByUnit(admin, input.organizationId, invited.userId, String(driver.unit_number), input.actorId);
+        }
+        imported += 1;
+      } catch {
+        continue;
       }
-      imported += 1;
     }
     return imported;
   }

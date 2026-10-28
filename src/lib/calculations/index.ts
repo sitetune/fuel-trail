@@ -15,6 +15,8 @@ export {
   monthKeyInTimezone,
   monthRangeInTimezone,
   previousMonthRangeInTimezone,
+  yearRangeInTimezone,
+  previousYearRangeInTimezone,
   iftaQuarterRange,
   previousIftaQuarter,
   fromZonedDateTime,

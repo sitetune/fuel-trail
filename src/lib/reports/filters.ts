@@ -1,5 +1,6 @@
 import type { FuelPeriod } from "@/lib/calculations/dates";
 import { normalizeJurisdiction } from "./jurisdiction";
+import { parseReportRange, type ReportRange } from "./ranges";
 
 export type ReportFilters = {
   from?: string | null;
@@ -12,6 +13,7 @@ export type ReportFilters = {
   fuelType?: string | null;
   report?: "reported" | "unreported" | null;
   period: FuelPeriod;
+  range: ReportRange;
 };
 
 export function parseReportFilters(url: URL): ReportFilters {
@@ -28,6 +30,7 @@ export function parseReportFilters(url: URL): ReportFilters {
     fuelType: url.searchParams.get("fuelType"),
     report: report === "reported" || report === "unreported" ? report : null,
     period: period === "week" || period === "year" ? period : "month",
+    range: parseReportRange(url.searchParams.get("range")),
   };
 }
 
@@ -41,6 +44,7 @@ export function reportFiltersAreActive(filters: ReportFilters) {
       filters.jurisdiction ||
       filters.status ||
       filters.fuelType ||
-      filters.report,
+      filters.report ||
+      (filters.range && filters.range !== "all"),
   );
 }

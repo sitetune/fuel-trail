@@ -40,6 +40,7 @@ export function ReportFilterForm({
         <Card>
           <form className="grid gap-3 md:grid-cols-4" method="get">
             <input type="hidden" name="period" value={filters.period} />
+            {filters.range && filters.range !== "all" ? <input type="hidden" name="range" value={filters.range} /> : null}
             <div>
               <Label htmlFor="from">From</Label>
               <Input id="from" name="from" type="date" defaultValue={filters.from ?? ""} />
@@ -81,7 +82,8 @@ export function ReportFilterForm({
             <div>
               <Label htmlFor="status">Status</Label>
               <select id="status" name="status" className="h-11 w-full rounded-md border px-3" defaultValue={filters.status ?? ""}>
-                <option value="">Submitted + verified</option>
+                <option value="">Needs review + submitted + verified</option>
+                <option value="needs_review">needs review</option>
                 <option value="verified">verified</option>
                 <option value="submitted">submitted</option>
               </select>

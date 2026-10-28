@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { ClearFuelStopButton } from "@/components/fuel-planning/clear-fuel-stop-button";
 
 export function IssuePlanButton({
   planId,
@@ -46,6 +47,7 @@ export function IssuePlanButton({
       >
         {sent ? "Send again" : "Send to driver"}
       </Button>
+      {sent ? <ClearFuelStopButton planId={planId} label="Remove from driver" /> : null}
       {message ? <p className="text-sm text-muted">{message}</p> : null}
     </div>
   );

@@ -77,6 +77,18 @@ export function previousMonthRangeInTimezone(timezone: string, at = new Date()) 
   return monthRangeInTimezone(timezone, new Date(current.start.getTime() - 1));
 }
 
+export function yearRangeInTimezone(timezone: string, at = new Date()) {
+  const { year } = dateParts(at, timezone);
+  const start = fromZonedDateTime(year, 1, 1, 0, 0, 0, timezone);
+  const end = fromZonedDateTime(year + 1, 1, 1, 0, 0, 0, timezone);
+  return { start, end, year, label: String(year) };
+}
+
+export function previousYearRangeInTimezone(timezone: string, at = new Date()) {
+  const current = yearRangeInTimezone(timezone, at);
+  return yearRangeInTimezone(timezone, new Date(current.start.getTime() - 1));
+}
+
 export function iftaQuarterRange(timezone: string, at = new Date()) {
   const { year, month } = dateParts(at, timezone);
   const quarter = Math.ceil(month / 3) as 1 | 2 | 3 | 4;

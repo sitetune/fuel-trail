@@ -5,6 +5,7 @@ import { MetricCard, PageHeader } from "@/components/ui/page-header";
 import { requireManagement } from "@/lib/auth/session";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { explainSpendChange, monthRangeInTimezone, previousMonthRangeInTimezone, weightedAveragePrice } from "@/lib/calculations";
+import { receiptOccurredAt } from "@/lib/receipts/occurred";
 import { formatUsd } from "@/lib/utils";
 
 export default async function ManageDashboardPage() {
@@ -20,19 +21,21 @@ export default async function ManageDashboardPage() {
   const { data: receipts } = await supabase
     .from("fuel_receipts")
     .select("*, trucks(unit_number), profiles:driver_id(full_name)")
-    .in("status", ["submitted", "verified", "needs_review"]);
+    .in("status", ["draft", "processing", "needs_review", "submitted", "verified"]);
   const { data: estimates } = await supabase.from("latest_fuel_estimates").select("*");
   const { data: assignments } = await supabase
     .from("driver_truck_assignments")
     .select("truck_id, profiles:driver_id(full_name)")
     .is("ends_at", null);
 
-  const thisMonth = (receipts ?? []).filter(
-    (row) => row.purchased_at && new Date(row.purchased_at) >= current.start && new Date(row.purchased_at) < current.end,
-  );
-  const lastMonth = (receipts ?? []).filter(
-    (row) => row.purchased_at && new Date(row.purchased_at) >= previous.start && new Date(row.purchased_at) < previous.end,
-  );
+  const thisMonth = (receipts ?? []).filter((row) => {
+    const at = receiptOccurredAt(row);
+    return at != null && at >= current.start && at < current.end;
+  });
+  const lastMonth = (receipts ?? []).filter((row) => {
+    const at = receiptOccurredAt(row);
+    return at != null && at >= previous.start && at < previous.end;
+  });
   const spend = thisMonth.reduce((sum, row) => sum + Number(row.total_amount ?? 0), 0);
   const gallons = thisMonth.reduce((sum, row) => sum + Number(row.gallons ?? 0), 0);
   const prevSpend = lastMonth.reduce((sum, row) => sum + Number(row.total_amount ?? 0), 0);
@@ -55,7 +58,7 @@ export default async function ManageDashboardPage() {
     <div className="space-y-6">
       <PageHeader
         title="Dashboard"
-        description="Truck-first spend, gallons, and estimated fuel for this month."
+        description="Truck-first spend, gallons, and estimated fuel for this month. Receipts without a pump date use the upload time."
         actions={
           <>
             {user.profile.role === "owner_admin" ? (

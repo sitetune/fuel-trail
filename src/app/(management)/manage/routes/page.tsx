@@ -3,6 +3,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { UpgradeNotice } from "@/components/billing/upgrade-notice";
 import { canMutateFleet } from "@/lib/auth/roles";
 import { assertPlanAllows, PlanLimitError } from "@/lib/billing/assert";
+import { expireStaleIssuedPlans } from "@/lib/routing/issue-plan";
 import { requireManagement } from "@/lib/auth/session";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
@@ -14,6 +15,7 @@ export default async function RoutesPage() {
     if (error instanceof PlanLimitError) return <UpgradeNotice message={error.message} />;
     throw error;
   }
+  await expireStaleIssuedPlans(user.organization.id);
   const supabase = await createServerSupabaseClient();
   const { data: trucks } = await supabase.from("trucks").select("id, unit_number").eq("status", "active");
   const { data: assignments } = await supabase
@@ -30,7 +32,7 @@ export default async function RoutesPage() {
     <div className="space-y-6">
       <PageHeader
         title="Fuel stops"
-        description="Search a city or click the map to find truck stops and fuel stations from OpenStreetMap. Live GasBuddy prices are not available without a licensed feed; we overlay prices from your imports when a stop matches."
+        description="Search a city or click the map to find truck stops and fuel stations from OpenStreetMap. Issued stops stay on the driver phone for 24 hours unless you remove them sooner."
       />
       <FuelStopsWorkspace
         trucks={trucks ?? []}

@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { requireSession } from "@/lib/auth/session";
+import { expireStaleIssuedPlans } from "@/lib/routing/issue-plan";
 import { DRIVER_FUEL_STOP_SELECT, enrichDriverFuelStop, resolveDriverFuelStop } from "@/lib/routing/driver-stop";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { QueueStatus } from "@/components/driver/queue-status";
@@ -38,6 +39,7 @@ export default async function DriverHomePage() {
     .eq("driver_id", user.authUserId)
     .order("created_at", { ascending: false })
     .limit(3);
+  await expireStaleIssuedPlans(user.organization.id);
   const { data: plan } = truck
     ? await supabase
         .from("route_plans")

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { GasPump, MapPin } from "@phosphor-icons/react/ssr";
 import { Button } from "@/components/ui/button";
 import { DirectionsActions } from "@/components/driver/directions-actions";
+import { ClearFuelStopButton } from "@/components/fuel-planning/clear-fuel-stop-button";
 import { driverFuelStopHref, type DriverFuelStopView } from "@/lib/routing/driver-stop";
 import { formatGallons, cn } from "@/lib/utils";
 
@@ -66,7 +67,8 @@ export function FuelStopAssignment({
         <Button asChild variant="outline" className="w-full border-white/30 bg-transparent text-white hover:bg-white/10">
           <Link href={detailsHref}>Station details</Link>
         </Button>
-        <p className="text-xs text-steel">You make the final safety decision.</p>
+        <ClearFuelStopButton planId={stop.planId} label="Clear this stop" tone="dark" />
+        <p className="text-xs text-steel">Stops clear automatically after 24 hours. You make the final safety decision.</p>
       </section>
     );
   }
@@ -100,7 +102,8 @@ export function FuelStopAssignment({
       ) : (
         <p className="text-sm text-muted">No coordinates are stored for this stop, so directions are unavailable.</p>
       )}
-      <p className="text-sm text-muted">You make the final safety decision.</p>
+      <ClearFuelStopButton planId={stop.planId} label="Clear this stop" />
+      <p className="text-sm text-muted">Stops clear automatically after 24 hours. You make the final safety decision.</p>
     </div>
   );
 }

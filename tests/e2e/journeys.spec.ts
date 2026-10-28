@@ -84,7 +84,7 @@ test("6. OCR review and submission", async ({ page }) => {
   await page.getByLabel("Gallons").fill("80");
   await page.getByLabel("Total").fill("280");
   await page.getByRole("button", { name: /Submit receipt|Resubmit receipt/ }).click();
-  await expect(page.getByText("Receipt submitted")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Receipts" })).toBeVisible();
 });
 
 test("7. offline queue and retry", async ({ page }) => {

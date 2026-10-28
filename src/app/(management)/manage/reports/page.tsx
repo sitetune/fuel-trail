@@ -1,7 +1,9 @@
 import { IFTA_LIMITATION_NOTE, groupIftaWorksheet } from "@/lib/reports/ifta";
 import { parseReportFilters, queryFuelReportRows } from "@/lib/reports/query";
 import { groupAvgFuelByTruck } from "@/lib/reports/avg-fuel";
-import { groupByCarrier } from "@/lib/reports/carrier";
+import { groupByMerchant } from "@/lib/reports/carrier";
+import { percentChange, summarizeFuelSpend } from "@/lib/reports/spend-summary";
+import { previousReportRangeBounds, type ReportRange } from "@/lib/reports/ranges";
 import { assertPlanAllows, PlanLimitError } from "@/lib/billing/assert";
 import { UpgradeNotice } from "@/components/billing/upgrade-notice";
 import { isOwnerAdmin } from "@/lib/auth/roles";
@@ -9,7 +11,7 @@ import { requireManagement } from "@/lib/auth/session";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { PageHeader } from "@/components/ui/page-header";
+import { MetricCard, PageHeader } from "@/components/ui/page-header";
 import { ReportFilterForm } from "@/components/management/report-filter-form";
 import { formatGallons, formatUsd, cn } from "@/lib/utils";
 import { formatPricePerGallon } from "@/lib/receipts/format";
@@ -22,11 +24,32 @@ const PERIODS: Array<{ id: FuelPeriod; label: string }> = [
   { id: "year", label: "Yearly" },
 ];
 
-function reportsHref(params: URLSearchParams, period: FuelPeriod) {
+const RANGES: Array<{ id: ReportRange; label: string }> = [
+  { id: "all", label: "All time" },
+  { id: "month", label: "This month" },
+  { id: "last_month", label: "Last month" },
+  { id: "year", label: "This year" },
+];
+
+function reportsHref(params: URLSearchParams, patch: Record<string, string | null>) {
   const next = new URLSearchParams(params);
-  next.set("period", period);
+  for (const [key, value] of Object.entries(patch)) {
+    if (value) next.set(key, value);
+    else next.delete(key);
+  }
   const query = next.toString();
   return query ? `/manage/reports?${query}` : "/manage/reports";
+}
+
+function changeHint(current: number, previous: number | null) {
+  if (previous == null) return undefined;
+  const change = percentChange(current, previous);
+  if (change == null) return undefined;
+  return (
+    <span className={change < 0 ? "text-success" : "text-muted"}>
+      {change}% vs previous period
+    </span>
+  );
 }
 
 export default async function ReportsPage({
@@ -48,7 +71,20 @@ export default async function ReportsPage({
     if (text) url.searchParams.set(key, text);
   }
   const filters = parseReportFilters(url);
+  const timezone = user.organization.timezone || "America/Chicago";
   const { receipts, rows } = await queryFuelReportRows(user, filters);
+  const previousBounds =
+    !filters.from && !filters.to ? previousReportRangeBounds(filters.range, timezone) : null;
+  const previousRows = previousBounds
+    ? (
+        await queryFuelReportRows(user, {
+          ...filters,
+          from: previousBounds.from,
+          to: previousBounds.to,
+          range: "all",
+        })
+      ).rows
+    : [];
   const supabase = await createServerSupabaseClient();
   const [{ data: trucks }, { data: drivers }, { data: runs }] = await Promise.all([
     supabase.from("trucks").select("id, unit_number").order("unit_number"),
@@ -71,18 +107,73 @@ export default async function ReportsPage({
     if (row.amended_at) amended += 1;
   }
   const ifta = groupIftaWorksheet(rows);
-  const carriers = groupByCarrier(rows);
+  const merchants = groupByMerchant(rows);
+  const summary = summarizeFuelSpend(rows);
+  const previousSummary = previousBounds ? summarizeFuelSpend(previousRows) : null;
   const query = url.searchParams.toString();
   const csvHref = query ? `/api/reports/fuel.csv?${query}` : "/api/reports/fuel.csv";
   const iftaHref = query ? `/api/reports/ifta-fuel.csv?${query}` : "/api/reports/ifta-fuel.csv";
-  const carrierHref = query ? `/api/reports/carrier.csv?${query}` : "/api/reports/carrier.csv";
+  const merchantHref = query ? `/api/reports/carrier.csv?${query}` : "/api/reports/carrier.csv";
+  const avgFuelHref = query ? `/api/reports/avg-fuel.csv?${query}` : "/api/reports/avg-fuel.csv";
 
   return (
     <div className="space-y-6">
       <PageHeader
         title="Reports"
-        description="Average fuel by truck for each week, month, or year. Driver names are included when a receipt has one."
+        description="Spending, fill-ups, volume, and average price for a truck or the whole fleet. Compare all time, this month, last month, or this year."
       />
+      <div className="flex flex-wrap gap-2" role="group" aria-label="Date range">
+        {RANGES.map((range) => (
+          <Link
+            key={range.id}
+            href={reportsHref(url.searchParams, { range: range.id === "all" ? null : range.id })}
+            className={cn(
+              "inline-flex min-h-11 items-center rounded-full border px-4 text-sm font-semibold",
+              filters.range === range.id
+                ? "border-route bg-route text-white"
+                : "border-steel/40 text-muted hover:text-ink",
+            )}
+            aria-current={filters.range === range.id ? "page" : undefined}
+          >
+            {range.label}
+          </Link>
+        ))}
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+        <MetricCard
+          label="Fuel spend"
+          value={formatUsd(summary.spend)}
+          hint={previousSummary ? changeHint(summary.spend, previousSummary.spend) : undefined}
+        />
+        <MetricCard
+          label="Fill-ups"
+          value={summary.fillUps}
+          hint={previousSummary ? changeHint(summary.fillUps, previousSummary.fillUps) : undefined}
+        />
+        <MetricCard
+          label="Fuel volume"
+          value={formatGallons(summary.gallons)}
+          hint={previousSummary ? changeHint(summary.gallons, previousSummary.gallons) : undefined}
+        />
+        <MetricCard
+          label="Avg fill-up"
+          value={summary.avgFillCost == null ? "—" : formatUsd(summary.avgFillCost)}
+          hint={
+            previousSummary?.avgFillCost != null && summary.avgFillCost != null
+              ? changeHint(summary.avgFillCost, previousSummary.avgFillCost)
+              : undefined
+          }
+        />
+        <MetricCard
+          label="Avg fuel price"
+          value={summary.avgPrice == null ? "—" : formatPricePerGallon(summary.avgPrice)}
+          hint={
+            previousSummary?.avgPrice != null && summary.avgPrice != null
+              ? changeHint(summary.avgPrice, previousSummary.avgPrice)
+              : undefined
+          }
+        />
+      </div>
       <ReportFilterForm filters={filters} trucks={trucks ?? []} drivers={drivers ?? []} />
       <div className="flex flex-wrap gap-3">
         <Button asChild variant="primary">
@@ -96,8 +187,13 @@ export default async function ReportsPage({
           </a>
         </Button>
         <Button asChild variant="outline">
-          <a href={carrierHref} download="fueltrail-carrier-report.csv">
-            Download carrier CSV
+          <a href={avgFuelHref} download="fueltrail-avg-fuel-by-truck.csv">
+            Download average fuel by truck
+          </a>
+        </Button>
+        <Button asChild variant="outline">
+          <a href={merchantHref} download="fueltrail-merchant-report.csv">
+            Download merchant CSV
           </a>
         </Button>
         {isOwnerAdmin(user.profile.role) ? (
@@ -121,14 +217,14 @@ export default async function ReportsPage({
           <div>
             <h2 className="font-display text-lg font-semibold tracking-tight">Average fuel by truck</h2>
             <p className="mt-1 text-sm text-muted">
-              Gallons, spend, and average price from submitted and verified receipts.
+              Gallons, spend, and average price from uploaded receipts that have amounts.
             </p>
           </div>
           <div className="inline-grid grid-cols-3 rounded-full border border-steel/30 bg-warm p-1" role="group" aria-label="Report period">
             {PERIODS.map((period) => (
               <Link
                 key={period.id}
-                href={reportsHref(url.searchParams, period.id)}
+                href={reportsHref(url.searchParams, { period: period.id })}
                 className={cn(
                   "min-h-11 rounded-full px-4 text-center text-sm font-semibold leading-[2.75rem]",
                   filters.period === period.id ? "bg-route text-white" : "text-muted hover:text-ink",
@@ -171,11 +267,11 @@ export default async function ReportsPage({
           </table>
         </div>
         {avgFuel.length === 0 ? (
-          <p className="mt-3 text-sm text-muted">No submitted or verified receipts in this view yet.</p>
+          <p className="mt-3 text-sm text-muted">No receipts with amounts in this view yet.</p>
         ) : null}
       </Card>
       <Card>
-        <h2 className="font-display text-lg font-semibold tracking-tight">By carrier</h2>
+        <h2 className="font-display text-lg font-semibold tracking-tight">By merchant</h2>
         <p className="mt-1 text-sm text-muted">Gallons, spend, and receipt count grouped by merchant name.</p>
         <div className="mt-4 overflow-x-auto">
           <table className="w-full min-w-[560px] text-left text-sm">
@@ -188,7 +284,7 @@ export default async function ReportsPage({
               </tr>
             </thead>
             <tbody>
-              {carriers.map((row) => (
+              {merchants.map((row) => (
                 <tr key={row.merchant} className="border-b border-steel/20">
                   <td className="py-2 font-medium">{row.merchant}</td>
                   <td className="tabular-nums">{formatGallons(row.gallons)}</td>
@@ -199,8 +295,8 @@ export default async function ReportsPage({
             </tbody>
           </table>
         </div>
-        {carriers.length === 0 ? (
-          <p className="mt-3 text-sm text-muted">No submitted or verified receipts in this view yet.</p>
+        {merchants.length === 0 ? (
+          <p className="mt-3 text-sm text-muted">No receipts with amounts in this view yet.</p>
         ) : null}
       </Card>
       <Card>

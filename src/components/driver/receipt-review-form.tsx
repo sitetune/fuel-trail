@@ -149,7 +149,7 @@ export function ReceiptReviewForm({
       setError(json.error?.message ?? "Could not submit.");
       return;
     }
-    router.push(`/driver/receipts/${receiptId}/submitted`);
+    router.push("/driver/receipts");
   }
 
   const highlight = (confidence: number | null | undefined, missing: boolean) =>

@@ -65,7 +65,12 @@ export function FuelStopsWorkspace({
     }
     const nextCenter = json.data.center as { lat: number; lng: number; label: string };
     setCenter({ name: nextCenter.label, lat: nextCenter.lat, lng: nextCenter.lng });
-    setStops(json.data.stops as MappedFuelStop[]);
+    const nextStops = json.data.stops as MappedFuelStop[];
+    if (nextStops.length === 0) {
+      setMessage("No stations found there. Pins already on the map stay put.");
+      return;
+    }
+    setStops(nextStops);
     const extra = [json.data.notice, json.data.priceSource].filter(Boolean).join(" ");
     setMessage(extra);
   }

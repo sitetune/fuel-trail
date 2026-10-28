@@ -61,7 +61,7 @@ export function UsersManager({
 
   return (
     <div className="space-y-6">
-      {message ? <p className="text-sm">{message}</p> : null}
+      {message ? <p className="break-all text-sm">{message}</p> : null}
       {canInvite ? (
         <Card>
           <h2 className="mb-3 font-semibold">Invite user</h2>
@@ -84,17 +84,18 @@ export function UsersManager({
                 }),
               });
               const payload = (await response.json().catch(() => null)) as
-                | { error?: { message?: string } }
-                | { data?: unknown }
+                | { error?: { message?: string }; data?: { emailed?: boolean; inviteUrl?: string | null } }
                 | null;
-              setMessage(
-                response.ok
-                  ? "Invite sent."
-                  : payload && "error" in payload
-                    ? (payload.error?.message ?? "Invite failed.")
-                    : "Invite failed.",
-              );
-              if (response.ok) event.currentTarget.reset();
+              if (!response.ok) {
+                setMessage(payload?.error?.message ?? "Invite failed.");
+                return;
+              }
+              if (payload?.data?.inviteUrl) {
+                setMessage(`User created. Email did not send. Copy this invite link: ${payload.data.inviteUrl}`);
+              } else {
+                setMessage("Invite sent.");
+              }
+              event.currentTarget.reset();
             }}
           >
             <div className="space-y-1.5">
@@ -230,7 +231,18 @@ export function UsersManager({
                           role: person.role,
                         }),
                       });
-                      setMessage(response.ok ? `Invite resent to ${person.email}.` : "Could not resend invite.");
+                      const payload = (await response.json().catch(() => null)) as
+                        | { error?: { message?: string }; data?: { emailed?: boolean; inviteUrl?: string | null } }
+                        | null;
+                      if (!response.ok) {
+                        setMessage(payload?.error?.message ?? "Could not resend invite.");
+                        return;
+                      }
+                      setMessage(
+                        payload?.data?.inviteUrl
+                          ? `Email did not send. Copy this invite link: ${payload.data.inviteUrl}`
+                          : `Invite resent to ${person.email}.`,
+                      );
                     }}
                   >
                     Resend invite

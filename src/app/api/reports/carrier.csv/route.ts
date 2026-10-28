@@ -25,7 +25,7 @@ export async function GET(request: Request) {
     return new Response(csv, {
       headers: {
         "Content-Type": "text/csv; charset=utf-8",
-        "Content-Disposition": 'attachment; filename="fueltrail-carrier-report.csv"',
+        "Content-Disposition": 'attachment; filename="fueltrail-merchant-report.csv"',
       },
     });
   } catch (error) {
@@ -35,6 +35,6 @@ export async function GET(request: Request) {
     if (error instanceof AuthError) {
       return apiError(error.code === "unauthenticated" ? 401 : 403, error.code, error.message);
     }
-    return apiError(400, "report_failed", "Could not export carrier report.");
+    return apiError(400, "report_failed", "Could not export merchant report.");
   }
 }

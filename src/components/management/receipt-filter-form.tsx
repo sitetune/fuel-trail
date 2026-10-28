@@ -35,20 +35,37 @@ export function ReceiptFilterForm({
 
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap items-center gap-3">
-        <Button type="button" variant="outline" onClick={() => setOpen((value) => !value)}>
-          {open ? "Hide filters" : "Filters"}
+      <form className="flex flex-wrap items-end gap-3" method="get">
+        {filters.status ? <input type="hidden" name="status" value={filters.status} /> : null}
+        {filters.truckId ? <input type="hidden" name="truckId" value={filters.truckId} /> : null}
+        {filters.driverId ? <input type="hidden" name="driverId" value={filters.driverId} /> : null}
+        {filters.region ? <input type="hidden" name="region" value={filters.region} /> : null}
+        {filters.from ? <input type="hidden" name="from" value={filters.from} /> : null}
+        {filters.to ? <input type="hidden" name="to" value={filters.to} /> : null}
+        {filters.ocr ? <input type="hidden" name="ocr" value={filters.ocr} /> : null}
+        {filters.report ? <input type="hidden" name="report" value={filters.report} /> : null}
+        {filters.sort && filters.sort !== "purchased_at" ? <input type="hidden" name="sort" value={filters.sort} /> : null}
+        {filters.dir === "asc" ? <input type="hidden" name="dir" value="asc" /> : null}
+        <div className="min-w-0 flex-1">
+          <Label htmlFor="q">Search receipts</Label>
+          <Input id="q" name="q" defaultValue={filters.q ?? ""} placeholder="Merchant, city, or receipt #" />
+        </div>
+        <Button type="submit" variant="primary">
+          Search
         </Button>
-        {!open && active ? <p className="text-sm text-muted">{summary || "Filters applied"}</p> : null}
-      </div>
+        <Button type="button" variant="outline" onClick={() => setOpen((value) => !value)}>
+          {open ? "Hide filters" : "More filters"}
+        </Button>
+      </form>
+      {!open && active && !filters.q ? <p className="text-sm text-muted">{summary || "Filters applied"}</p> : null}
       {open ? (
         <Card>
           <form className="grid gap-3 md:grid-cols-4" method="get">
             {filters.sort && filters.sort !== "purchased_at" ? <input type="hidden" name="sort" value={filters.sort} /> : null}
             {filters.dir === "asc" ? <input type="hidden" name="dir" value="asc" /> : null}
             <div className="md:col-span-2">
-              <Label htmlFor="q">Search</Label>
-              <Input id="q" name="q" defaultValue={filters.q ?? ""} placeholder="Merchant, city, or receipt #" />
+              <Label htmlFor="q-filters">Search</Label>
+              <Input id="q-filters" name="q" defaultValue={filters.q ?? ""} placeholder="Merchant, city, or receipt #" />
             </div>
             <div>
               <Label htmlFor="status">Status</Label>
